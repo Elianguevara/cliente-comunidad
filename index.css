@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    /* Fondo gris claro por defecto, transición suave */
+    @apply bg-slate-50 text-slate-900 transition-colors duration-300; 
+  }
+
+  /* Fondo oscuro cuando está activo el modo dark */
+  .dark body {
+    @apply bg-slate-950 text-slate-50;
+  }
+}
