@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
+import { ProfilePage } from '../pages/profile/ProfilePage'; // <--- Importar
 import { FeedPage } from '../pages/feed/FeedPage';
 import { CreatePetitionPage } from '../pages/feed/CreatePetitionPage';
 import { ClientHomePage } from '../pages/client/ClientHomePage'; // <--- Importamos la nueva página de Cliente
@@ -25,6 +26,7 @@ export const AppRouter = () => {
           
           {/* Ruta común para crear solicitudes */}
           <Route path="/create-petition" element={<CreatePetitionPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           
         </Route>
 

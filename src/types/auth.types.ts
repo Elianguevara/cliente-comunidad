@@ -17,4 +17,6 @@ export interface RegisterRequest {
 export interface AuthResponse {
   token: string;
   role: 'CUSTOMER' | 'PROVIDER'; // <--- Nuevo campo
+  name: string; 
+  email: string;
 }

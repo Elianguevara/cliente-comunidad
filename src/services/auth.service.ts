@@ -9,6 +9,8 @@ export const authService = {
       localStorage.setItem('token', response.data.token);
       // Guardamos el rol para usarlo en el Router o componentes
       localStorage.setItem('role', response.data.role);
+      localStorage.setItem('userName', response.data.name); 
+      localStorage.setItem('userEmail', response.data.email);
     }
     return response.data;
   },
@@ -20,6 +22,8 @@ export const authService = {
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('role', response.data.role);
+      localStorage.setItem('userName', response.data.name);
+      localStorage.setItem('userEmail', response.data.email);
     }
     return response.data;
   },
@@ -27,7 +31,9 @@ export const authService = {
   // Utilidad para cerrar sesión
   logout: () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('role'); // Limpiamos todo el almacenamiento local
+    localStorage.removeItem('role');
+    localStorage.removeItem('userName');  // Limpiar
+    localStorage.removeItem('userEmail'); // Limpiamos todo el almacenamiento local
     // Aquí podríamos redirigir al login más adelante
     window.location.href = '/login';
   }
