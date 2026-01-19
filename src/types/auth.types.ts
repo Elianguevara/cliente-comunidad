@@ -16,4 +16,5 @@ export interface RegisterRequest {
 // Basado en tu AuthenticationResponse.java
 export interface AuthResponse {
   token: string;
+  role: 'CUSTOMER' | 'PROVIDER'; // <--- Nuevo campo
 }
