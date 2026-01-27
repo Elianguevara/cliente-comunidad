@@ -3,14 +3,13 @@ export interface UserProfile {
   name: string;
   lastname: string;
   email: string;
-  role: 'CUSTOMER' | 'PROVIDER';
-  phone?: string;       // Opcional
-  location?: string;    // Opcional
-  avatarUrl?: string;
-  
-  // Estadísticas (Diferentes según rol)
+  role: string;
+  phone?: string;       // Ahora vendrá real del backend
+  description?: string; // Nuevo campo
+  profession?: string;  // Nuevo campo
+  profileImage?: string; 
   stats: {
     label: string;
-    value: string | number;
+    value: string;
   }[];
 }

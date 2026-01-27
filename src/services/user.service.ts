@@ -1,46 +1,32 @@
 import client from '../api/axiosClient';
 import type { UserProfile } from '../types/user.types';
 
+// Definimos la interfaz de los datos que se pueden enviar para actualizar
+// (Debe coincidir con los campos de UserProfileRequest en Java)
+export interface UpdateProfileData {
+  name?: string;
+  lastname?: string;
+  phone?: string;       // Solo para CLIENTES
+  description?: string; // Solo para PROVEEDORES
+  idProfession?: number;// Solo para PROVEEDORES
+}
+
 export const userService = {
-  // Obtener perfil completo
+  // 1. Obtener perfil completo (GET /users/me)
+  // Ahora confiamos plenamente en que el backend devolverá el DTO correcto.
   getProfile: async (): Promise<UserProfile> => {
-    // 1. Intentamos obtener datos frescos del backend
-    // (Asumimos que existe un endpoint GET /users/me o /users/profile)
-    try {
-      const response = await client.get('/users/me'); 
-      return response.data;
-    } catch (error) {
-      // FALLBACK TEMPORAL: Si el endpoint no existe aún, construimos el perfil
-      // usando los datos que ya tenemos en localStorage para que no falle.
-      console.warn("Usando perfil local (API no conectada)");
-      
-      const role = localStorage.getItem('role') as 'CUSTOMER' | 'PROVIDER' || 'CUSTOMER';
-      const name = localStorage.getItem('userName') || 'Usuario';
-      
-      return {
-        id: 0,
-        name: name.split(' ')[0], // Primer nombre
-        lastname: name.split(' ')[1] || '',
-        email: localStorage.getItem('userEmail') || '',
-        role: role,
-        phone: '+54 9 261 000 0000', // Dato pendiente de backend
-        location: 'Mendoza, Argentina', // Dato pendiente de backend
-        stats: role === 'PROVIDER' 
-          ? [
-              { label: 'Calificación', value: '5.0 ★' },
-              { label: 'Trabajos', value: 0 },
-              { label: 'Nivel', value: 'Inicial' }
-            ]
-          : [
-              { label: 'Peticiones', value: 0 },
-              { label: 'Reseñas', value: 0 },
-              { label: 'Actividad', value: 'Baja' }
-            ]
-      };
-    }
+    const response = await client.get<UserProfile>('/users/me'); 
+    return response.data;
   },
 
-  // Eliminar cuenta (Lo que hablamos antes)
+  // 2. Actualizar perfil (PUT /users/me)
+  // Enviamos el objeto con los cambios y recibimos el perfil actualizado.
+  updateProfile: async (data: UpdateProfileData): Promise<UserProfile> => {
+    const response = await client.put<UserProfile>('/users/me', data);
+    return response.data;
+  },
+
+  // 3. Eliminar cuenta (DELETE /users/me)
   deleteAccount: async () => {
     return client.delete('/users/me');
   }
