@@ -9,6 +9,7 @@ export interface UpdateProfileData {
   phone?: string;       // Solo para CLIENTES
   description?: string; // Solo para PROVEEDORES
   idProfession?: number;// Solo para PROVEEDORES
+  profileImage?: string; 
 }
 
 export const userService = {
