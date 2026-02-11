@@ -4,11 +4,12 @@ import { petitionService } from '../../services/petition.service';
 import type { PetitionResponse } from '../../types/petition.types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 
 export const FeedPage = () => {
   const [petitions, setPetitions] = useState<PetitionResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadFeed();
@@ -17,11 +18,12 @@ export const FeedPage = () => {
   const loadFeed = async () => {
     try {
       setLoading(true);
-      const data = await petitionService.getFeed();
+      // Pedimos la página 0 con 10 elementos (puedes aumentar el size)
+      const data = await petitionService.getFeed(0, 20);
       setPetitions(data.content);
     } catch (err) {
-      setError('No pudimos cargar las publicaciones recientes.');
-      console.error(err);
+      console.error("Error cargando feed", err);
+      setError('No pudimos cargar las ofertas disponibles. Intenta más tarde.');
     } finally {
       setLoading(false);
     }
@@ -31,89 +33,107 @@ export const FeedPage = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       <Navbar />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Título de Sección */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Explorar Trabajos</h1>
-          <p className="text-slate-500 dark:text-slate-400">Oportunidades recientes en tu comunidad</p>
+        {/* ENCABEZADO */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            Oportunidades Disponibles
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">
+            Explora las solicitudes de clientes cercanas a ti.
+          </p>
         </div>
 
-        {/* Estado de Carga */}
-        {loading && (
-          <div className="space-y-4 animate-pulse">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800"></div>
-            ))}
-          </div>
-        )}
-
-        {/* Estado de Error */}
+        {/* ESTADO DE ERROR */}
         {error && (
-          <div className="p-4 bg-red-50 text-red-600 rounded-lg text-center border border-red-100">
+          <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl mb-6 text-center border border-red-100 dark:border-red-800">
             {error}
           </div>
         )}
 
-        {/* Lista de Peticiones */}
-        <div className="space-y-6">
-          {!loading && petitions.map((petition) => (
-            <article 
-              key={petition.idPetition} 
-              className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-md transition-shadow"
-            >
-              <div className="p-6">
-                
-                {/* Header de la Tarjeta */}
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold">
-                      {petition.customerName.charAt(0)}
+        {/* ESTADO DE CARGA (Skeletons) */}
+        {loading && (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-64 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
+            ))}
+          </div>
+        )}
+
+        {/* LISTA DE TRABAJOS */}
+        {!loading && !error && (
+          <>
+            {petitions.length === 0 ? (
+              // Estado vacío
+              <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                <div className="text-6xl mb-4">📭</div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">No hay ofertas por ahora</h3>
+                <p className="text-slate-500 mt-2">Vuelve a intentar más tarde, ¡los clientes publican seguido!</p>
+              </div>
+            ) : (
+              // Grid de tarjetas
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {petitions.map((petition) => (
+                  <article 
+                    key={petition.idPetition} 
+                    className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-md hover:border-brand-300 dark:hover:border-brand-700 transition-all flex flex-col h-full group"
+                  >
+                    {/* Header de la tarjeta */}
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        {/* Avatar o Icono de la categoría */}
+                        <div className="w-10 h-10 rounded-full bg-brand-50 dark:bg-slate-800 flex items-center justify-center text-xl">
+                          🛠️
+                        </div>
+                        <div>
+                          <span className="block text-xs font-bold text-brand-600 uppercase tracking-wide">
+                            {petition.typePetitionName}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {formatDistanceToNow(new Date(petition.dateSince), { addSuffix: true, locale: es })}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                        {petition.customerName}
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {/* Fecha relativa: "hace 2 horas" */}
-                        {formatDistanceToNow(new Date(petition.dateSince), { addSuffix: true, locale: es })}
+
+                    {/* Contenido */}
+                    <div className="flex-1">
+                      <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2 line-clamp-1 group-hover:text-brand-600 transition-colors">
+                        {petition.professionName}
+                      </h2>
+                      <p className="text-slate-600 dark:text-slate-400 text-sm mb-4 line-clamp-3">
+                        {petition.description}
                       </p>
                     </div>
-                  </div>
-                  
-                  {/* Badge de Categoría/Tipo */}
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                    {petition.typePetitionName}
-                  </span>
-                </div>
 
-                {/* Contenido */}
-                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">
-                  Necesito un {petition.professionName}
-                </h2>
-                <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-4 line-clamp-3">
-                  {petition.description}
-                </p>
-
-                {/* Footer de la Tarjeta (Ubicación y Acción) */}
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center text-slate-500 dark:text-slate-400 text-sm">
-                    {/* Icono Ubicación (SVG) */}
-                    <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    {petition.cityName}
-                  </div>
-                  
-                  <button className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors">
-                    Ver detalles →
-                  </button>
-                </div>
+                    {/* Footer / Info extra */}
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                          <span>📍</span>
+                          <span>{petition.cityName}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                          <span>👤</span>
+                          <span className="truncate max-w-[100px]">{petition.customerName}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Botón de Acción */}
+                      <Link 
+                        to={`/petition/${petition.idPetition}`}
+                        className="mt-4 block w-full py-2.5 text-center bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium rounded-xl hover:bg-brand-600 hover:text-white transition-colors"
+                      >
+                        Ver detalles
+                      </Link>
+                    </div>
+                  </article>
+                ))}
               </div>
-            </article>
-          ))}
-        </div>
+            )}
+          </>
+        )}
       </main>
     </div>
   );
