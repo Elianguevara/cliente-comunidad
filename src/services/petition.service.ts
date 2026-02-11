@@ -39,7 +39,25 @@ export const petitionService = {
     return response.data;
   },
 
+  // --- MÉTODOS NUEVOS (Solución a tu error) ---
+
+  /**
+   * Obtiene el detalle de una solicitud por su ID.
+   */
+  getById: async (id: number) => {
+    const response = await client.get<PetitionResponse>(`/petitions/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Elimina una solicitud por su ID.
+   */
+  delete: async (id: number) => {
+    await client.delete(`/petitions/${id}`);
+  },
+
   // --- MÉTODOS AUXILIARES (Mocks) ---
+  
   getProfessions: async () => {
     return [
       { id: 1, name: 'Electricista' },

@@ -5,13 +5,15 @@ import { ProfilePage } from '../pages/profile/ProfilePage';
 import { FeedPage } from '../pages/feed/FeedPage';
 import { CreatePetitionPage } from '../pages/feed/CreatePetitionPage';
 import { ClientHomePage } from '../pages/client/ClientHomePage';
+// IMPORTANTE: Importamos la nueva página de detalle
+import { PetitionDetailPage } from '../pages/feed/PetitionDetailPage'; 
 import { ProtectedRoute } from './ProtectedRoute';
 
 // --- GUARDIA DE ROL: Solo Clientes ---
-// Evita que los proveedores entren a crear solicitudes escribiendo la URL a mano.
+// Evita que los proveedores entren a secciones de gestión de solicitudes.
 const RequireCustomer = () => {
   const role = localStorage.getItem('role');
-  // Si no es cliente, lo mandamos al Feed de trabajo (donde pertenecen los proveedores)
+  // Si no es cliente, lo mandamos al Feed de trabajo
   if (role !== 'CUSTOMER') {
     return <Navigate to="/feed" replace />;
   }
@@ -55,8 +57,11 @@ export const AppRouter = () => {
           <Route path="/client-home" element={<ClientHomePage />} />
           
           {/* --- ZONA BLINDADA: Solo Clientes --- */}
+          {/* Aquí ponemos todas las rutas que solo el dueño de la solicitud debe ver */}
           <Route element={<RequireCustomer />}>
              <Route path="/create-petition" element={<CreatePetitionPage />} />
+             {/* Nueva ruta para ver el detalle y eliminar */}
+             <Route path="/petition/:id" element={<PetitionDetailPage />} />
           </Route>
           
         </Route>
