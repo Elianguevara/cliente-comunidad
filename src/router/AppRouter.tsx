@@ -1,11 +1,38 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
-import { ProfilePage } from '../pages/profile/ProfilePage'; // <--- Importar
+import { ProfilePage } from '../pages/profile/ProfilePage';
 import { FeedPage } from '../pages/feed/FeedPage';
 import { CreatePetitionPage } from '../pages/feed/CreatePetitionPage';
-import { ClientHomePage } from '../pages/client/ClientHomePage'; // <--- Importamos la nueva página de Cliente
+import { ClientHomePage } from '../pages/client/ClientHomePage';
 import { ProtectedRoute } from './ProtectedRoute';
+
+// --- GUARDIA DE ROL: Solo Clientes ---
+// Evita que los proveedores entren a crear solicitudes escribiendo la URL a mano.
+const RequireCustomer = () => {
+  const role = localStorage.getItem('role');
+  // Si no es cliente, lo mandamos al Feed de trabajo (donde pertenecen los proveedores)
+  if (role !== 'CUSTOMER') {
+    return <Navigate to="/feed" replace />;
+  }
+  return <Outlet />;
+};
+
+// --- REDIRECCIÓN INTELIGENTE ---
+// Decide a dónde enviar al usuario cuando entra a la raíz "/"
+const RootRedirect = () => {
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+
+  // Si no está logueado -> Login
+  if (!token) return <Navigate to="/login" replace />;
+  
+  // Si es Proveedor -> Feed de Trabajos
+  if (role === 'PROVIDER') return <Navigate to="/feed" replace />;
+  
+  // Si es Cliente -> Home de Cliente
+  return <Navigate to="/client-home" replace />;
+};
 
 export const AppRouter = () => {
   return (
@@ -15,30 +42,30 @@ export const AppRouter = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* --- Rutas Privadas (Protegidas) --- */}
+        {/* --- Rutas Privadas (Requieren Token) --- */}
         <Route element={<ProtectedRoute />}>
           
-          {/* Ruta para Proveedores (Ver trabajos) */}
+          {/* Rutas Comunes */}
+          <Route path="/profile" element={<ProfilePage />} />
+          
+          {/* Ruta Específica para Proveedores */}
           <Route path="/feed" element={<FeedPage />} />
           
-          {/* Ruta para Clientes (Ver profesionales y resumen) */}
+          {/* Ruta Específica para Clientes */}
           <Route path="/client-home" element={<ClientHomePage />} />
           
-          {/* Ruta común para crear solicitudes */}
-          <Route path="/create-petition" element={<CreatePetitionPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          {/* --- ZONA BLINDADA: Solo Clientes --- */}
+          <Route element={<RequireCustomer />}>
+             <Route path="/create-petition" element={<CreatePetitionPage />} />
+          </Route>
           
         </Route>
 
-        {/* --- Redirecciones por defecto --- */}
-        {/* Aquí podríamos mejorar la lógica: 
-            Si entran a la raíz '/', redirigir según el rol guardado en localStorage.
-            Por ahora, redirigimos al login si no saben a dónde ir.
-        */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* --- Ruta Raíz Inteligente --- */}
+        <Route path="/" element={<RootRedirect />} />
 
-        {/* Ruta 404 */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* Ruta 404 (Cualquier otra cosa va al login o redirige) */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

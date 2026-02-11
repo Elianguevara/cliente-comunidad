@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
-import { petitionService } from '../../services/petition.service'; // Asegúrate de que este archivo tenga createPetition
+import { petitionService } from '../../services/petition.service';
 import type { PetitionRequest } from '../../types/petition.types';
 
 export const CreatePetitionPage = () => {
@@ -13,6 +13,10 @@ export const CreatePetitionPage = () => {
   const [professions, setProfessions] = useState<{id: number, name: string}[]>([]);
   const [cities, setCities] = useState<{id: number, name: string}[]>([]);
   const [types, setTypes] = useState<{id: number, name: string}[]>([]);
+
+  // ESTADO NUEVO: Feedback visual para el usuario
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -33,25 +37,56 @@ export const CreatePetitionPage = () => {
   }, []);
 
   const onSubmit = async (data: PetitionRequest) => {
+    setStatus('idle'); // Limpiamos estados previos
+    setErrorMessage('');
+
     try {
       const payload = {
         ...data,
-        // CORRECCIÓN 1: Asegurar conversión a números
         idProfession: Number(data.idProfession),
         idCity: Number(data.idCity),
         idTypePetition: Number(data.idTypePetition),
-        // CORRECCIÓN 2: La fecha ya viene como string YYYY-MM-DD del input, se envía tal cual
       };
       
-      // CORRECCIÓN 3: Usar el nombre correcto del método (createPetition)
       await petitionService.createPetition(payload);
       
-      navigate('/client-home'); // Volver al dashboard del cliente
-    } catch (error) {
+      // 1. ÉXITO: Cambiamos estado para mostrar mensaje verde
+      setStatus('success');
+      
+      // 2. Esperamos 2 segundos y redirigimos
+      setTimeout(() => {
+        navigate('/client-home');
+      }, 2000);
+
+    } catch (error: any) {
       console.error('Error al crear:', error);
-      alert('Hubo un error al publicar la solicitud.');
+      // 3. ERROR: Mostramos mensaje rojo
+      setStatus('error');
+      // Intentamos leer el mensaje del backend o ponemos uno genérico
+      const msg = error.response?.data?.message || 'Hubo un problema al conectar con el servidor.';
+      setErrorMessage(msg);
     }
   };
+
+  // Si fue exitoso, mostramos una pantalla de confirmación limpia
+  if (status === 'success') {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] px-4">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-lg text-center max-w-md border border-green-100 dark:border-green-900">
+            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+              ✓
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">¡Solicitud Publicada!</h2>
+            <p className="text-slate-600 dark:text-slate-400">
+              Los profesionales verán tu solicitud enseguida. Te estamos redirigiendo a tu panel...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
@@ -64,6 +99,17 @@ export const CreatePetitionPage = () => {
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Publicar nueva solicitud</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1">Describe qué necesitas para que los profesionales te contacten.</p>
           </div>
+
+          {/* MENSAJE DE ERROR (Solo visible si falla) */}
+          {status === 'error' && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3">
+              <span className="text-red-500 text-xl">⚠️</span>
+              <div>
+                <h3 className="text-sm font-bold text-red-800 dark:text-red-300">No se pudo publicar</h3>
+                <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errorMessage}</p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             
@@ -119,7 +165,7 @@ export const CreatePetitionPage = () => {
                 {errors.idCity && <span className="text-red-500 text-xs">{errors.idCity.message}</span>}
               </div>
 
-              {/* CORRECCIÓN 4: Campo Fecha (Faltaba en tu código) */}
+              {/* Campo Fecha */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Válida hasta
@@ -169,9 +215,10 @@ export const CreatePetitionPage = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg shadow-sm focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-all disabled:opacity-50"
+                className="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg shadow-sm focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                {isSubmitting ? 'Publicando...' : 'Publicar Solicitud'}
+                {isSubmitting && <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>}
+                {isSubmitting ? 'Enviando...' : 'Publicar Solicitud'}
               </button>
             </div>
 
