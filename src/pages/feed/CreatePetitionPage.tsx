@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
-import { petitionService } from '../../services/petition.service';
+import { petitionService } from '../../services/petition.service'; // Asegúrate de que este archivo tenga createPetition
 import type { PetitionRequest } from '../../types/petition.types';
 
 export const CreatePetitionPage = () => {
@@ -15,30 +15,38 @@ export const CreatePetitionPage = () => {
   const [types, setTypes] = useState<{id: number, name: string}[]>([]);
 
   useEffect(() => {
-    // Cargar datos auxiliares al iniciar
     const loadData = async () => {
-      const p = await petitionService.getProfessions();
-      const c = await petitionService.getCities();
-      const t = await petitionService.getTypes();
-      setProfessions(p);
-      setCities(c);
-      setTypes(t);
+      try {
+        const [p, c, t] = await Promise.all([
+          petitionService.getProfessions(),
+          petitionService.getCities(),
+          petitionService.getTypes()
+        ]);
+        setProfessions(p);
+        setCities(c);
+        setTypes(t);
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+      }
     };
     loadData();
   }, []);
 
   const onSubmit = async (data: PetitionRequest) => {
     try {
-      // Convertir IDs a números (los select a veces devuelven strings)
       const payload = {
         ...data,
+        // CORRECCIÓN 1: Asegurar conversión a números
         idProfession: Number(data.idProfession),
         idCity: Number(data.idCity),
-        idTypePetition: Number(data.idTypePetition)
+        idTypePetition: Number(data.idTypePetition),
+        // CORRECCIÓN 2: La fecha ya viene como string YYYY-MM-DD del input, se envía tal cual
       };
       
-      await petitionService.create(payload);
-      navigate('/feed'); // Volver al muro tras publicar
+      // CORRECCIÓN 3: Usar el nombre correcto del método (createPetition)
+      await petitionService.createPetition(payload);
+      
+      navigate('/client-home'); // Volver al dashboard del cliente
     } catch (error) {
       console.error('Error al crear:', error);
       alert('Hubo un error al publicar la solicitud.');
@@ -111,6 +119,20 @@ export const CreatePetitionPage = () => {
                 {errors.idCity && <span className="text-red-500 text-xs">{errors.idCity.message}</span>}
               </div>
 
+              {/* CORRECCIÓN 4: Campo Fecha (Faltaba en tu código) */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Válida hasta
+                </label>
+                <input 
+                  type="date"
+                  {...register("dateUntil", { required: "Indica una fecha de vencimiento" })}
+                  className="w-full px-4 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none"
+                  min={new Date().toISOString().split("T")[0]}
+                />
+                {errors.dateUntil && <span className="text-red-500 text-xs">{errors.dateUntil.message}</span>}
+              </div>
+
                {/* Tipo */}
                <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -139,7 +161,7 @@ export const CreatePetitionPage = () => {
             <div className="flex items-center justify-end gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => navigate('/feed')}
+                onClick={() => navigate('/client-home')}
                 className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
               >
                 Cancelar
