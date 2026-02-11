@@ -4,8 +4,9 @@ import type { ChangeEvent, FormEvent } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
-import { authService } from '../../services/auth.service';
 
+// CORRECCIÓN AQUÍ: Importación nombrada (con llaves)
+import { authService } from '../../services/auth.service';
 // Importamos el servicio y el tipo de datos para actualización
 import { userService } from '../../services/user.service';
 import type { UpdateProfileData } from '../../services/user.service';
