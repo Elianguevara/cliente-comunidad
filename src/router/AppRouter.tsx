@@ -5,15 +5,13 @@ import { ProfilePage } from '../pages/profile/ProfilePage';
 import { FeedPage } from '../pages/feed/FeedPage';
 import { CreatePetitionPage } from '../pages/feed/CreatePetitionPage';
 import { ClientHomePage } from '../pages/client/ClientHomePage';
-// IMPORTANTE: Importamos la nueva página de detalle
-import { PetitionDetailPage } from '../pages/feed/PetitionDetailPage'; 
+import { PetitionDetailPage } from '../pages/feed/PetitionDetailPage';
 import { ProtectedRoute } from './ProtectedRoute';
 
 // --- GUARDIA DE ROL: Solo Clientes ---
-// Evita que los proveedores entren a secciones de gestión de solicitudes.
+// Evita que los proveedores entren a crear solicitudes.
 const RequireCustomer = () => {
   const role = localStorage.getItem('role');
-  // Si no es cliente, lo mandamos al Feed de trabajo
   if (role !== 'CUSTOMER') {
     return <Navigate to="/feed" replace />;
   }
@@ -26,13 +24,8 @@ const RootRedirect = () => {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('role');
 
-  // Si no está logueado -> Login
   if (!token) return <Navigate to="/login" replace />;
-  
-  // Si es Proveedor -> Feed de Trabajos
   if (role === 'PROVIDER') return <Navigate to="/feed" replace />;
-  
-  // Si es Cliente -> Home de Cliente
   return <Navigate to="/client-home" replace />;
 };
 
@@ -47,21 +40,21 @@ export const AppRouter = () => {
         {/* --- Rutas Privadas (Requieren Token) --- */}
         <Route element={<ProtectedRoute />}>
           
-          {/* Rutas Comunes */}
+          {/* 1. Rutas Comunes (Accesibles para TODOS) */}
           <Route path="/profile" element={<ProfilePage />} />
+          {/* El detalle de la petición es público para los usuarios logueados */}
+          <Route path="/petition/:id" element={<PetitionDetailPage />} />
           
-          {/* Ruta Específica para Proveedores */}
+          {/* 2. Ruta Específica para Proveedores */}
           <Route path="/feed" element={<FeedPage />} />
           
-          {/* Ruta Específica para Clientes */}
+          {/* 3. Ruta Específica para Clientes */}
           <Route path="/client-home" element={<ClientHomePage />} />
           
-          {/* --- ZONA BLINDADA: Solo Clientes --- */}
-          {/* Aquí ponemos todas las rutas que solo el dueño de la solicitud debe ver */}
+          {/* 4. ZONA BLINDADA: Solo Clientes */}
+          {/* Solo un cliente puede acceder al formulario de creación */}
           <Route element={<RequireCustomer />}>
              <Route path="/create-petition" element={<CreatePetitionPage />} />
-             {/* Nueva ruta para ver el detalle y eliminar */}
-             <Route path="/petition/:id" element={<PetitionDetailPage />} />
           </Route>
           
         </Route>
@@ -69,7 +62,7 @@ export const AppRouter = () => {
         {/* --- Ruta Raíz Inteligente --- */}
         <Route path="/" element={<RootRedirect />} />
 
-        {/* Ruta 404 (Cualquier otra cosa va al login o redirige) */}
+        {/* Ruta 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
