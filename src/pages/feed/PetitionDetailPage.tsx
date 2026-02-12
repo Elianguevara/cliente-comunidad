@@ -4,6 +4,7 @@ import { Navbar } from '../../components/layout/Navbar';
 import { petitionService } from '../../services/petition.service';
 import { postulationService } from '../../services/postulation.service';
 import type { PetitionResponse } from '../../types/petition.types';
+import type { PostulationResponse } from '../../types/postulation.types';
 import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -11,11 +12,15 @@ export const PetitionDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
+  // Estados de datos
   const [petition, setPetition] = useState<PetitionResponse | null>(null);
+  const [postulations, setPostulations] = useState<PostulationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Estados de UI
   const [isDeleting, setIsDeleting] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [isAccepting, setIsAccepting] = useState<number | null>(null);
   const [showApplyForm, setShowApplyForm] = useState(false);
   const [alreadyApplied, setAlreadyApplied] = useState(false); 
 
@@ -24,22 +29,23 @@ export const PetitionDetailPage = () => {
 
   useEffect(() => {
     if (id) {
-      const idNum = Number(id);
-      loadData(idNum);
+      loadData(Number(id));
     }
   }, [id]);
 
   const loadData = async (idPetition: number) => {
     try {
       setLoading(true);
-      // Carga en paralelo la petición y el estado de postulación
-      const [petitionData, hasApplied] = await Promise.all([
+      // Carga en paralelo según el rol
+      const [petitionData, hasApplied, postulationsData] = await Promise.all([
         petitionService.getById(idPetition),
-        role === 'PROVIDER' ? postulationService.checkIfApplied(idPetition) : Promise.resolve(false)
+        role === 'PROVIDER' ? postulationService.checkIfApplied(idPetition) : Promise.resolve(false),
+        role === 'CUSTOMER' ? postulationService.getByPetition(idPetition) : Promise.resolve([])
       ]);
 
       setPetition(petitionData);
       setAlreadyApplied(hasApplied);
+      setPostulations(postulationsData);
     } catch (error) {
       console.error("Error al cargar datos:", error);
       alert("No se pudo cargar la información.");
@@ -62,23 +68,30 @@ export const PetitionDetailPage = () => {
       });
       
       alert("¡Postulación enviada con éxito!");
-      setAlreadyApplied(true); // Actualizamos estado local
+      setAlreadyApplied(true);
       setShowApplyForm(false);
       navigate('/feed');
-      
     } catch (error: any) {
-      // CAPTURA DE ERROR DEL BACKEND
-      const errorMessage = error.response?.data?.message || error.response?.data || "Error al procesar la solicitud.";
-      
-      if (error.response?.status === 400 || error.response?.status === 409) {
-        // Aquí se mostrará: "Ya tienes una postulación activa para este trabajo."
-        alert(`Atención: ${errorMessage}`);
-        setAlreadyApplied(true); // Bloqueamos el formulario si el server confirma que ya existe
-      } else {
-        alert("Ocurrió un error inesperado. Inténtalo más tarde.");
-      }
+      const errorMessage = error.response?.data?.message || "Error al postularse.";
+      alert(`Atención: ${errorMessage}`);
     } finally {
       setIsApplying(false);
+    }
+  };
+
+  const handleAcceptProvider = async (idPostulation: number) => {
+    if (!window.confirm("¿Confirmas que quieres trabajar con este profesional? Esta acción cerrará la búsqueda y notificará a los demás.")) return;
+
+    try {
+      setIsAccepting(idPostulation);
+      await postulationService.accept(idPostulation);
+      alert("¡Postulación aceptada con éxito!");
+      // Recargamos los datos para reflejar el estado "ADJUDICADA"
+      if (id) loadData(Number(id));
+    } catch (error) {
+      alert("No se pudo procesar la aceptación.");
+    } finally {
+      setIsAccepting(null);
     }
   };
 
@@ -100,6 +113,8 @@ export const PetitionDetailPage = () => {
   if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Cargando...</div>;
   if (!petition) return null;
 
+  const isAdjudicada = petition.stateName === 'ADJUDICADA';
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors">
       <Navbar />
@@ -112,7 +127,8 @@ export const PetitionDetailPage = () => {
         </button>
 
         <div className="grid md:grid-cols-3 gap-8">
-          <div className="md:col-span-2 space-y-6">
+          {/* Columna Izquierda: Detalle y Candidatos */}
+          <div className="md:col-span-2 space-y-8">
             <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-800">
               <div className="flex justify-between items-start mb-4">
                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider 
@@ -130,29 +146,82 @@ export const PetitionDetailPage = () => {
                 <div>📅 Vence: {format(new Date(petition.dateUntil), 'dd/MM/yyyy')}</div>
               </div>
             </div>
+
+            {/* SECCIÓN DE CANDIDATOS (Solo Cliente) */}
+            {role === 'CUSTOMER' && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Candidatos Postulados ({postulations.length})</h2>
+                {postulations.length === 0 ? (
+                  <div className="bg-white dark:bg-slate-900 p-8 rounded-xl border border-dashed border-slate-300 text-center text-slate-500">
+                    Aún no hay postulaciones para este trabajo.
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {postulations.map((p) => (
+                      <div key={p.idPostulation} className={`p-5 bg-white dark:bg-slate-900 rounded-xl border-2 transition-all 
+                        ${p.isWinner ? 'border-green-500 shadow-md ring-1 ring-green-500' : 'border-slate-100 dark:border-slate-800'}`}>
+                        <div className="flex justify-between items-center">
+                          <div className="flex gap-4 items-center">
+                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-xl overflow-hidden border">
+                              {p.providerImage ? <img src={p.providerImage} alt={p.providerName} className="w-full h-full object-cover" /> : '👤'}
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-slate-900 dark:text-white">{p.providerName}</h3>
+                              <p className="text-sm text-slate-500 italic">"{p.description}"</p>
+                            </div>
+                          </div>
+                          
+                          <div className="text-right">
+                            {p.isWinner ? (
+                              <div className="flex flex-col items-end">
+                                <span className="text-green-600 font-bold flex items-center gap-1">✅ Seleccionado</span>
+                              </div>
+                            ) : (
+                              !isAdjudicada && (
+                                <button 
+                                  onClick={() => handleAcceptProvider(p.idPostulation)}
+                                  disabled={isAccepting !== null}
+                                  className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                                >
+                                  {isAccepting === p.idPostulation ? 'Aceptando...' : 'Aceptar'}
+                                </button>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
+          {/* Columna Derecha: Estado y Acciones */}
           <div className="space-y-6">
-            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-800">
-              <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Estado Actual</h3>
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Estado del Trabajo</h3>
               <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
-                <span className="text-green-700 dark:text-green-400 font-bold uppercase text-sm">{petition.stateName}</span>
+                <span className={`w-3 h-3 rounded-full animate-pulse ${isAdjudicada ? 'bg-blue-500' : 'bg-green-500'}`}></span>
+                <span className={`font-bold uppercase text-sm ${isAdjudicada ? 'text-blue-600' : 'text-green-600'}`}>
+                  {petition.stateName}
+                </span>
               </div>
             </div>
 
-            {role === 'PROVIDER' && (
+            {/* Botones de Proveedor */}
+            {role === 'PROVIDER' && !isAdjudicada && (
               <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-lg border border-brand-100 dark:border-brand-900/30">
                 {alreadyApplied ? (
                   <div className="text-center py-4">
                     <span className="text-4xl">✅</span>
                     <h3 className="font-bold text-slate-900 dark:text-white mt-2">Ya te has postulado</h3>
-                    <p className="text-sm text-slate-500">El cliente ya tiene tu oferta en su panel.</p>
+                    <p className="text-sm text-slate-500">Tu oferta está en revisión.</p>
                   </div>
                 ) : !showApplyForm ? (
                   <button 
                     onClick={() => setShowApplyForm(true)}
-                    className="w-full py-3 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 transition-colors shadow-lg shadow-brand-200"
+                    className="w-full py-3 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 transition-colors shadow-lg"
                   >
                     Me interesa 👋
                   </button>
@@ -160,24 +229,22 @@ export const PetitionDetailPage = () => {
                   <form onSubmit={handleApply} className="space-y-4 animate-fade-in-up">
                     <h3 className="font-bold text-slate-900 dark:text-white">Nueva Propuesta</h3>
                     <input 
-                      type="number" 
-                      required
+                      type="number" required
                       value={offer.budget}
                       onChange={e => setOffer({...offer, budget: e.target.value})}
                       className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg outline-none focus:ring-2 focus:ring-brand-500"
                       placeholder="Tu presupuesto ($)"
                     />
                     <textarea 
-                      rows={3}
-                      required
+                      rows={3} required
                       value={offer.description}
                       onChange={e => setOffer({...offer, description: e.target.value})}
                       className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                       placeholder="Detalles de tu oferta..."
                     />
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => setShowApplyForm(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200">Cancelar</button>
-                      <button type="submit" disabled={isApplying} className="flex-1 py-2 bg-brand-600 text-white rounded-lg text-sm font-bold hover:bg-brand-700 disabled:opacity-50">
+                      <button type="button" onClick={() => setShowApplyForm(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">Cancelar</button>
+                      <button type="submit" disabled={isApplying} className="flex-1 py-2 bg-brand-600 text-white rounded-lg text-sm font-bold hover:bg-brand-700">
                         {isApplying ? 'Enviando...' : 'Enviar'}
                       </button>
                     </div>
@@ -186,11 +253,12 @@ export const PetitionDetailPage = () => {
               </div>
             )}
 
-            {role === 'CUSTOMER' && (
+            {/* Botón de Eliminar (Solo Cliente si no está adjudicada) */}
+            {role === 'CUSTOMER' && !isAdjudicada && (
               <button 
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="w-full py-4 bg-white dark:bg-slate-900 border-2 border-red-100 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all shadow-sm flex justify-center items-center gap-2"
+                className="w-full py-4 bg-white dark:bg-slate-900 border-2 border-red-100 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all flex justify-center items-center gap-2"
               >
                 {isDeleting ? 'Eliminando...' : '🗑️ Eliminar Solicitud'}
               </button>
