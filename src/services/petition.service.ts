@@ -39,8 +39,6 @@ export const petitionService = {
     return response.data;
   },
 
-  // --- MÉTODOS NUEVOS (Solución a tu error) ---
-
   /**
    * Obtiene el detalle de una solicitud por su ID.
    */
@@ -56,7 +54,23 @@ export const petitionService = {
     await client.delete(`/petitions/${id}`);
   },
 
-  // --- MÉTODOS AUXILIARES (Mocks) ---
+  /**
+   * Marca una solicitud como FINALIZADA (Acción del Cliente).
+   */
+  complete: async (id: number): Promise<PetitionResponse> => {
+    const response = await client.put<PetitionResponse>(`/petitions/${id}/complete`);
+    return response.data;
+  },
+
+  /**
+   * Reactiva una solicitud cancelada.
+   */
+  reactivate: async (id: number): Promise<PetitionResponse> => {
+    const response = await client.patch<PetitionResponse>(`/petitions/${id}/reactivate`);
+    return response.data;
+  },
+
+  // --- MÉTODOS AUXILIARES (Metadata) ---
   
   getProfessions: async () => {
     return [
@@ -78,10 +92,10 @@ export const petitionService = {
   },
   
   getTypes: async () => {
-      return [
-          { id: 1, name: 'Urgencia' },
-          { id: 2, name: 'Presupuesto' },
-          { id: 3, name: 'Consulta' }
-      ];
+    return [
+      { id: 1, name: 'Urgencia' },
+      { id: 2, name: 'Presupuesto' },
+      { id: 3, name: 'Consulta' }
+    ];
   }
 };
