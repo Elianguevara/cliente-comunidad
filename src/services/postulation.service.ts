@@ -33,7 +33,8 @@ export const postulationService = {
 
   // Historial de postulaciones del usuario autenticado
   getMyPostulations: async (page = 0, size = 10) => {
-    const response = await client.get(`/postulations/my?page=${page}&size=${size}`);
+    // Cambia sort=datePostulation por sort=dateCreate
+    const response = await client.get(`/postulations/my?page=${page}&size=${size}&sort=dateCreate,desc`);
     return response.data;
   }
 };
