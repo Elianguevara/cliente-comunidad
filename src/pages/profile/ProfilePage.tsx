@@ -58,7 +58,7 @@ export const ProfilePage = () => {
         alert('Tu cuenta ha sido eliminada.');
         authService.logout();
         navigate('/login');
-      } catch (error) {
+      } catch {
         alert('Error al eliminar cuenta. Intenta nuevamente.');
         setIsDeleting(false);
       }

@@ -14,7 +14,7 @@ export const postulationService = {
     try {
       const response = await client.get(`/postulations/check/${idPetition}`);
       return response.data;
-    } catch (error) {
+    } catch {
       return false;
     }
   },

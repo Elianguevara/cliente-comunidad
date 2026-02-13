@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
 import type { RegisterRequest } from '../../types/auth.types';
@@ -7,14 +7,14 @@ import { useState } from 'react';
 export const RegisterPage = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<RegisterRequest>({
+  const { register, handleSubmit, setValue, control, formState: { errors, isSubmitting } } = useForm<RegisterRequest>({
     defaultValues: {
       role: 'CUSTOMER' // Valor por defecto
     }
   });
 
   // Observamos el rol para cambiar estilos visuales según la selección
-  const selectedRole = watch('role');
+  const selectedRole = useWatch({ control, name: 'role' });
 
   const onSubmit = async (data: RegisterRequest) => {
     try {
