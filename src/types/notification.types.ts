@@ -1,12 +1,10 @@
-// src/types/notification.types.ts
-
 export interface NotificationResponse {
-  id: number;
+  idNotification: number; // Coincide con el backend
   title: string;
   message: string;
-  type: string; // Podrías refinarlo a: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR'
+  notificationType: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
   isRead: boolean;
   createdAt: string;
-  relatedPostulationId?: number; // Pueden ser nulos según el tipo de notif
-  relatedPetitionId?: number;
+  readAt?: string;
+  metadata?: string; // Aquí viaja el link como "/petition/5"
 }

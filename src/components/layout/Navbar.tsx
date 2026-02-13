@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
+import { NotificationBell } from './NotificationBell'; // Asegúrate de crear este archivo
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           
-          {/* LOGO */}
+          {/* LOGO E IZQUIERDA */}
           <div className="flex items-center gap-8">
             <Link 
               to={userRole === 'PROVIDER' ? '/feed' : '/client-home'} 
@@ -50,8 +51,11 @@ export const Navbar = () => {
           </div>
 
           {/* MENÚ DERECHA */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             
+            {/* Campana de Notificaciones (Para ambos roles) */}
+            <NotificationBell />
+
             {/* Botón Publicar (Solo Clientes) */}
             {userRole === 'CUSTOMER' && (
               <Link 
@@ -96,7 +100,6 @@ export const Navbar = () => {
                       Mi Perfil
                     </Link>
 
-                    {/* Enlace rápido en Dropdown para Proveedores */}
                     {userRole === 'PROVIDER' && (
                       <Link 
                         to="/my-postulations" 
