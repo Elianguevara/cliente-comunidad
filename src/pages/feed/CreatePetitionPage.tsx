@@ -3,12 +3,9 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 import { petitionService } from '../../services/petition.service';
+import { metadataService } from '../../services/metadata.service';
 import type { PetitionRequest } from '../../types/petition.types';
-
-interface SelectOption {
-  id: number;
-  name: string;
-}
+import type { City, Profession, TypePetition } from '../../types/metadata.types';
 
 interface ApiErrorPayload {
   message?: string;
@@ -31,33 +28,38 @@ export const CreatePetitionPage = () => {
     formState: { errors, isSubmitting },
   } = useForm<PetitionRequest>();
 
-  const [professions, setProfessions] = useState<SelectOption[]>([]);
-  const [cities, setCities] = useState<SelectOption[]>([]);
-  const [types, setTypes] = useState<SelectOption[]>([]);
+  // Estados tipados con las interfaces reales del backend
+  const [professions, setProfessions] = useState<Profession[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [types, setTypes] = useState<TypePetition[]>([]);
+  
   const [catalogLoading, setCatalogLoading] = useState(true);
-
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
   const descriptionValue = watch('description') ?? '';
+  // Calcula la fecha mínima (hoy) para el input date
   const minDate = useMemo(() => new Date().toISOString().split('T')[0], []);
 
+  // Carga inicial de datos maestros
   useEffect(() => {
     const loadData = async () => {
       try {
         setCatalogLoading(true);
-        const [p, c, t] = await Promise.all([
-          petitionService.getProfessions(),
-          petitionService.getCities(),
-          petitionService.getTypes(),
+        // Ejecutamos las 3 peticiones en paralelo
+        const [professionsData, citiesData, typesData] = await Promise.all([
+          metadataService.getAllProfessions(),
+          metadataService.getAllCities(),
+          metadataService.getAllTypes(),
         ]);
-        setProfessions(p);
-        setCities(c);
-        setTypes(t);
+        
+        setProfessions(professionsData);
+        setCities(citiesData);
+        setTypes(typesData);
       } catch (error) {
         console.error('Error cargando datos:', error);
         setStatus('error');
-        setErrorMessage('No se pudieron cargar las opciones del formulario. Recarga la pagina.');
+        setErrorMessage('Error cargando listas desplegables. Verifica tu conexión.');
       } finally {
         setCatalogLoading(false);
       }
@@ -71,8 +73,10 @@ export const CreatePetitionPage = () => {
     setErrorMessage('');
 
     try {
+      // Conversión explícita de tipos (los selects HTML devuelven strings)
       const payload: PetitionRequest = {
-        ...data,
+        description: data.description,
+        dateUntil: data.dateUntil,
         idProfession: Number(data.idProfession),
         idCity: Number(data.idCity),
         idTypePetition: Number(data.idTypePetition),
@@ -81,149 +85,208 @@ export const CreatePetitionPage = () => {
       await petitionService.createPetition(payload);
       setStatus('success');
 
+      // Redirección automática tras éxito
       setTimeout(() => {
         navigate('/client-home');
-      }, 1800);
+      }, 2000);
     } catch (error: unknown) {
       console.error('Error al crear:', error);
       setStatus('error');
-      setErrorMessage(getErrorMessage(error, 'Hubo un problema al conectar con el servidor.'));
+      setErrorMessage(getErrorMessage(error, 'Hubo un problema al crear la solicitud.'));
     }
   };
 
+  // --- VISTA DE ÉXITO ---
   if (status === 'success') {
     return (
-      <div className="app-shell">
+      <div className="min-h-screen bg-white dark:bg-slate-900">
         <Navbar />
         <div className="flex h-[calc(100vh-64px)] items-center justify-center px-4">
-          <div className="panel max-w-md p-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-3xl text-green-700">✓</div>
-            <h2 className="mb-2 text-2xl font-bold text-slate-900 dark:text-white">Solicitud publicada</h2>
-            <p className="text-slate-600 dark:text-slate-400">Los profesionales ya pueden verla. Te redirigimos a tu panel...</p>
+          <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:ring-white/10">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-3xl text-green-700">
+              ✓
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-slate-900 dark:text-white">
+              Solicitud publicada
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400">
+              Los profesionales de tu zona ya pueden ver tu solicitud.
+              <br />
+              <span className="text-sm">Redirigiendo a tu panel...</span>
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
+  // --- VISTA FORMULARIO ---
   return (
-    <div className="app-shell">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Navbar />
 
       <main className="mx-auto max-w-3xl px-4 py-8">
-        <section className="panel p-6 md:p-8">
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5 dark:bg-slate-900 dark:ring-white/10 md:p-8">
+          
+          {/* Encabezado */}
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Publicar nueva solicitud</h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Completa los datos para recibir propuestas relevantes.</p>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                Publicar nueva solicitud
+              </h1>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Completa los datos para recibir propuestas de profesionales verificados.
+              </p>
             </div>
-            <div className="rounded-xl bg-slate-100 px-3 py-2 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">Tiempo estimado: 2 minutos</div>
+            {/* Indicador de carga discreto para catálogos */}
+            {catalogLoading && (
+              <span className="text-xs text-blue-600 animate-pulse">Cargando opciones...</span>
+            )}
           </div>
 
+          {/* Banner de Error General */}
           {status === 'error' && (
-            <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-              <span className="text-xl text-red-500">⚠️</span>
+            <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-900/20">
+              <span className="text-xl">⚠️</span>
               <div>
-                <h3 className="text-sm font-bold text-red-800 dark:text-red-300">No se pudo publicar</h3>
-                <p className="mt-1 text-sm text-red-700 dark:text-red-400">{errorMessage}</p>
+                <h3 className="text-sm font-bold text-red-800 dark:text-red-300">
+                  No se pudo procesar
+                </h3>
+                <p className="mt-1 text-sm text-red-700 dark:text-red-400">
+                  {errorMessage}
+                </p>
               </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            
+            {/* 1. Descripción */}
             <section>
               <div className="mb-2 flex items-center justify-between">
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">1. ¿Que necesitas resolver?</label>
-                <span className="text-xs text-slate-500 dark:text-slate-400">{descriptionValue.length}/300</span>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  1. ¿Qué necesitas resolver?
+                </label>
+                <span className={`text-xs ${descriptionValue.length > 280 ? 'text-orange-500' : 'text-slate-500'}`}>
+                  {descriptionValue.length}/300
+                </span>
               </div>
               <textarea
                 {...register('description', {
-                  required: 'Describe tu necesidad',
-                  minLength: { value: 10, message: 'Se mas especifico (minimo 10 caracteres)' },
-                  maxLength: { value: 300, message: 'Maximo 300 caracteres' },
+                  required: 'La descripción es obligatoria',
+                  minLength: { value: 10, message: 'Sé más específico (mínimo 10 letras)' },
+                  maxLength: { value: 300, message: 'Máximo 300 caracteres' },
                 })}
-                rows={5}
-                className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-brand-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                placeholder="Ej: Necesito reparar una perdida de agua en la cocina. Disponible por la tarde."
+                rows={4}
+                className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
+                placeholder="Ej: Necesito reparar una pérdida de agua en la cocina. Es bajo la mesada..."
               />
-              {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>}
+              {errors.description && (
+                <p className="mt-1 text-xs font-medium text-red-500 animate-fadeIn">
+                  {errors.description.message}
+                </p>
+              )}
             </section>
 
+            {/* 2. Detalles Técnicos */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">2. Detalles del servicio</h2>
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Detalles del servicio
+              </h2>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                
+                {/* Selector Profesión */}
                 <div>
-                  <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Profesion requerida</label>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Profesión requerida
+                  </label>
                   <select
-                    {...register('idProfession', { required: 'Selecciona una profesion' })}
+                    {...register('idProfession', { required: 'Selecciona una profesión' })}
                     disabled={catalogLoading}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 outline-none transition focus:border-brand-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   >
                     <option value="">Seleccionar...</option>
-                    {professions.map((profession) => (
-                      <option key={profession.id} value={profession.id}>
-                        {profession.name}
+                    {professions.map((p) => (
+                      <option key={p.idProfession} value={p.idProfession}>
+                        {p.name}
                       </option>
                     ))}
                   </select>
                   {errors.idProfession && <p className="mt-1 text-xs text-red-500">{errors.idProfession.message}</p>}
                 </div>
 
+                {/* Selector Ciudad */}
                 <div>
-                  <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Ubicacion</label>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Ubicación del trabajo
+                  </label>
                   <select
-                    {...register('idCity', { required: 'Selecciona una ciudad' })}
+                    {...register('idCity', { required: 'Selecciona tu ciudad' })}
                     disabled={catalogLoading}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 outline-none transition focus:border-brand-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   >
                     <option value="">Seleccionar...</option>
-                    {cities.map((city) => (
-                      <option key={city.id} value={city.id}>
-                        {city.name}
+                    {cities.map((c) => (
+                      <option key={c.idCity} value={c.idCity}>
+                        {c.name}
                       </option>
                     ))}
                   </select>
                   {errors.idCity && <p className="mt-1 text-xs text-red-500">{errors.idCity.message}</p>}
                 </div>
 
+                {/* Fecha Límite */}
                 <div className="md:col-span-2">
-                  <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Valida hasta</label>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Válida hasta
+                  </label>
                   <input
                     type="date"
                     min={minDate}
-                    {...register('dateUntil', { required: 'Indica fecha de vencimiento' })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 outline-none transition focus:border-brand-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    {...register('dateUntil', { required: 'Indica hasta cuándo es válida' })}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                   {errors.dateUntil && <p className="mt-1 text-xs text-red-500">{errors.dateUntil.message}</p>}
                 </div>
               </div>
             </section>
 
+            {/* 3. Urgencia (Radio Cards) */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">3. Nivel de urgencia</h2>
+              <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Nivel de urgencia
+              </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {types.map((type) => (
-                  <label key={type.id} className="cursor-pointer">
+                  <label key={type.idTypePetition} className="relative cursor-pointer group">
                     <input
                       type="radio"
-                      value={type.id}
-                      {...register('idTypePetition', { required: 'Selecciona un tipo' })}
+                      value={type.idTypePetition}
+                      {...register('idTypePetition', { required: 'Selecciona el tipo de urgencia' })}
                       className="peer sr-only"
                     />
-                    <div className="rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-medium text-slate-700 transition-all peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-checked:text-brand-700 hover:border-brand-300 dark:border-slate-700 dark:text-slate-200 dark:peer-checked:bg-brand-900/20 dark:peer-checked:text-brand-300">
-                      {type.name}
+                    <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-4 text-center text-sm font-medium text-slate-600 transition-all 
+                      hover:border-blue-300 hover:shadow-sm
+                      peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:ring-1 peer-checked:ring-blue-600
+                      dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:peer-checked:bg-blue-900/30 dark:peer-checked:text-blue-300 dark:peer-checked:border-blue-500">
+                      {type.typePetitionName}
                     </div>
                   </label>
                 ))}
               </div>
-              {errors.idTypePetition && <p className="mt-1 text-xs text-red-500">{errors.idTypePetition.message}</p>}
+              {errors.idTypePetition && (
+                <p className="mt-2 text-xs font-medium text-red-500 text-center sm:text-left">
+                  {errors.idTypePetition.message}
+                </p>
+              )}
             </section>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5 dark:border-slate-800">
+            {/* Botones de Acción */}
+            <div className="flex flex-col-reverse gap-3 pt-6 sm:flex-row sm:items-center sm:justify-end border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => navigate('/client-home')}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                className="rounded-xl px-6 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 Cancelar
               </button>
@@ -231,12 +294,15 @@ export const CreatePetitionPage = () => {
               <button
                 type="submit"
                 disabled={isSubmitting || catalogLoading}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-8 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-blue-600/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:transform-none disabled:hover:bg-blue-600"
               >
-                {isSubmitting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+                {isSubmitting && (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                )}
                 {isSubmitting ? 'Publicando...' : 'Publicar solicitud'}
               </button>
             </div>
+
           </form>
         </section>
       </main>
