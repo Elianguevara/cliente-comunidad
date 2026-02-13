@@ -1,128 +1,193 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
-import { NotificationBell } from './NotificationBell'; // Asegúrate de crear este archivo
+import { NotificationBell } from './NotificationBell';
+
+type Role = 'CUSTOMER' | 'PROVIDER' | null;
 
 export const Navbar = () => {
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const userName = localStorage.getItem('userName') || 'Usuario';
   const userEmail = localStorage.getItem('userEmail') || 'usuario@email.com';
-  const userRole = localStorage.getItem('role'); 
+  const userRole = (localStorage.getItem('role') as Role) ?? null;
 
-  const avatarUrl = `https://ui-avatars.com/api/?name=${userName}&background=random&color=fff`;
+  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=0f172a&color=fff`;
+
+  const navLinks = useMemo(() => {
+    if (userRole === 'PROVIDER') {
+      return [
+        { to: '/feed', label: 'Oportunidades' },
+        { to: '/my-postulations', label: 'Mis Postulaciones' },
+      ];
+    }
+
+    return [
+      { to: '/client-home', label: 'Mi Panel' },
+      { to: '/create-petition', label: 'Publicar' },
+    ];
+  }, [userRole]);
+
+  const closeMenus = () => {
+    setIsMobileMenuOpen(false);
+    setIsUserMenuOpen(false);
+  };
 
   const handleLogout = () => {
     authService.logout();
+    closeMenus();
     navigate('/login');
   };
 
+  const roleLabel = userRole === 'PROVIDER' ? 'Proveedor' : 'Cliente';
+  const homePath = userRole === 'PROVIDER' ? '/feed' : '/client-home';
+
   return (
-    <nav className="sticky top-0 z-50 w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          
-          {/* LOGO E IZQUIERDA */}
-          <div className="flex items-center gap-8">
-            <Link 
-              to={userRole === 'PROVIDER' ? '/feed' : '/client-home'} 
-              className="flex-shrink-0 flex items-center gap-2"
-            >
-              <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">C</span>
-              </div>
-              <span className="font-bold text-xl tracking-tight text-slate-900 dark:text-white">
-                Comunidad
-              </span>
-            </Link>
-
-            {/* ENLACES DE NAVEGACIÓN (Escritorio) */}
-            <div className="hidden md:flex items-center gap-4">
-              {userRole === 'PROVIDER' && (
-                <Link 
-                  to="/my-postulations" 
-                  className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
-                >
-                  Mis Postulaciones
-                </Link>
-              )}
+    <nav className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-8">
+          <Link to={homePath} className="flex items-center gap-3" onClick={closeMenus}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">
+              <span className="text-lg font-bold">C</span>
             </div>
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-600">Red</p>
+              <p className="text-lg font-bold leading-none text-slate-900 dark:text-white">Comunidad</p>
+            </div>
+          </Link>
+
+          <div className="hidden items-center gap-1 md:flex">
+            {navLinks.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={closeMenus}
+                className={({ isActive }) =>
+                  `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
           </div>
+        </div>
 
-          {/* MENÚ DERECHA */}
-          <div className="flex items-center gap-2 md:gap-4">
-            
-            {/* Campana de Notificaciones (Para ambos roles) */}
-            <NotificationBell />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <NotificationBell />
 
-            {/* Botón Publicar (Solo Clientes) */}
-            {userRole === 'CUSTOMER' && (
-              <Link 
-                to="/create-petition"
-                className="hidden md:flex items-center gap-2 px-4 py-2 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 rounded-full text-sm font-medium hover:bg-brand-100 transition-colors"
-              >
-                <span>+ Publicar</span>
-              </Link>
-            )}
+          {userRole === 'CUSTOMER' && (
+            <Link
+              to="/create-petition"
+              onClick={closeMenus}
+              className="hidden rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 md:inline-flex"
+            >
+              Publicar
+            </Link>
+          )}
 
-            {/* ÁREA DE USUARIO */}
-            <div className="relative">
-              <button 
-                onClick={() => setIsOpen(!isOpen)} 
-                className="flex items-center gap-2 focus:outline-none transition-transform active:scale-95"
-              >
-                <img
-                  className="h-9 w-9 rounded-full object-cover border-2 border-slate-100 dark:border-slate-700 hover:border-brand-500 transition-colors"
-                  src={avatarUrl}
-                  alt={userName}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 md:hidden dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            aria-label="Abrir menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            <span className="text-lg">{isMobileMenuOpen ? 'x' : '☰'}</span>
+          </button>
+
+          <div className="relative hidden md:block">
+            <button
+              onClick={() => setIsUserMenuOpen((prev) => !prev)}
+              className="flex items-center gap-2 rounded-full p-1 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+              aria-expanded={isUserMenuOpen}
+              aria-haspopup="menu"
+            >
+              <img
+                className="h-9 w-9 rounded-full border-2 border-slate-100 object-cover dark:border-slate-700"
+                src={avatarUrl}
+                alt={userName}
+              />
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{roleLabel}</span>
+            </button>
+
+            {isUserMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-10 cursor-default"
+                  onClick={() => setIsUserMenuOpen(false)}
+                  aria-label="Cerrar menu"
                 />
-              </button>
-              
-              {/* DROPDOWN */}
-              {isOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-md shadow-lg py-1 border border-slate-100 dark:border-slate-700 z-20">
-                    <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{userName}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{userEmail}</p>
-                      <p className="text-[10px] mt-1 text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/30 inline-block px-2 rounded uppercase">
-                        {userRole === 'PROVIDER' ? 'Proveedor' : 'Cliente'}
-                      </p>
-                    </div>
-                    
-                    <Link 
-                      to="/profile" 
-                      className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700" 
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Mi Perfil
-                    </Link>
-
-                    {userRole === 'PROVIDER' && (
-                      <Link 
-                        to="/my-postulations" 
-                        className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700" 
-                        onClick={() => setIsOpen(false)}
-                      >
-                        Mis Postulaciones
-                      </Link>
-                    )}
-                    
-                    <button 
-                      onClick={handleLogout} 
-                      className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    >
-                      Cerrar Sesión
-                    </button>
+                <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                  <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-700">
+                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{userName}</p>
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{userEmail}</p>
                   </div>
-                </>
-              )}
-            </div>
+                  <Link to="/profile" onClick={closeMenus} className="block px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700">
+                    Mi Perfil
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full px-4 py-2 text-left text-sm text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                  >
+                    Cerrar Sesion
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
+
+      {isMobileMenuOpen && (
+        <div className="border-t border-slate-200 bg-white px-4 py-4 md:hidden dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-4 space-y-1">
+            {navLinks.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={closeMenus}
+                className={({ isActive }) =>
+                  `block rounded-lg px-3 py-2 text-sm font-medium ${
+                    isActive
+                      ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300'
+                      : 'text-slate-700 dark:text-slate-300'
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+            <div className="mb-3 flex items-center gap-3">
+              <img className="h-9 w-9 rounded-full object-cover" src={avatarUrl} alt={userName} />
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{userName}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{roleLabel}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Link to="/profile" onClick={closeMenus} className="rounded-lg bg-slate-100 px-3 py-2 text-center text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                Perfil
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400"
+              >
+                Salir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

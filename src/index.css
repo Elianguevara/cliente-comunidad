@@ -2,14 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --surface-base: #f8fafc;
+  --surface-soft: #ffffff;
+  --surface-muted: #f1f5f9;
+  --border-soft: #e2e8f0;
+  --text-strong: #0f172a;
+  --text-muted: #475569;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+}
+
 @layer base {
-  body {
-    /* Fondo gris claro por defecto, transición suave */
-    @apply bg-slate-50 text-slate-900 transition-colors duration-300; 
+  html {
+    @apply scroll-smooth;
   }
 
-  /* Fondo oscuro cuando está activo el modo dark */
+  body {
+    min-height: 100vh;
+    color: var(--text-strong);
+    background-color: var(--surface-base);
+    background-image: radial-gradient(circle at 12% 8%, rgba(37, 99, 235, 0.08), transparent 35%),
+      radial-gradient(circle at 88% 0%, rgba(56, 189, 248, 0.08), transparent 30%);
+    @apply antialiased transition-colors duration-300;
+  }
+
   .dark body {
     @apply bg-slate-950 text-slate-50;
+    background-image: radial-gradient(circle at 12% 8%, rgba(37, 99, 235, 0.16), transparent 35%),
+      radial-gradient(circle at 88% 0%, rgba(56, 189, 248, 0.12), transparent 30%);
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900;
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen bg-transparent;
+  }
+
+  .panel {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
+  }
+
+  .section-title {
+    @apply text-xl font-bold text-slate-900 dark:text-white;
+  }
+}
+
+@layer utilities {
+  .text-muted {
+    color: var(--text-muted);
   }
 }

@@ -1,207 +1,153 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Link } from 'react-router-dom';
 import { petitionService } from '../../services/petition.service';
 import type { PetitionResponse } from '../../types/petition.types';
-// Librería para fechas relativas (ej: "hace 2 horas")
-// Si no la tienes instalada: npm install date-fns
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export const ClientHomePage = () => {
-  // Estados para manejar la data y la carga
   const [myPetitions, setMyPetitions] = useState<PetitionResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Cargar datos al montar el componente
   useEffect(() => {
-    loadMyPetitions();
+    void loadMyPetitions();
   }, []);
 
   const loadMyPetitions = async () => {
     try {
       setLoading(true);
-      // Traemos las últimas 5 peticiones del cliente (página 0, tamaño 5)
       const data = await petitionService.getMyPetitions(0, 5);
       setMyPetitions(data.content);
     } catch (error) {
-      console.error("Error cargando mis solicitudes", error);
+      console.error('Error cargando mis solicitudes', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const stats = useMemo(() => {
+    const total = myPetitions.length;
+    const open = myPetitions.filter((petition) => petition.stateName === 'PUBLICADA').length;
+    const awarded = myPetitions.filter((petition) => petition.stateName === 'ADJUDICADA').length;
+
+    return { total, open, awarded };
+  }, [myPetitions]);
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+    <div className="app-shell">
       <Navbar />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
-        
-        {/* SECCIÓN 1: BIENVENIDA Y ACCIÓN RÁPIDA */}
-        <section className="bg-brand-600 rounded-2xl p-8 sm:p-12 text-white shadow-lg relative overflow-hidden">
-          {/* Decoración de fondo */}
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-brand-500 opacity-50 blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-40 h-40 rounded-full bg-brand-700 opacity-50 blur-2xl"></div>
-          
+
+      <main className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
+        <section className="relative overflow-hidden rounded-2xl bg-brand-600 p-8 text-white shadow-lg sm:p-12">
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-500/50 blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 h-44 w-44 rounded-full bg-brand-700/50 blur-2xl" />
+
           <div className="relative z-10 max-w-2xl">
-            <h1 className="text-3xl sm:text-4xl font-bold mb-4">
-              ¿Qué problema necesitas resolver hoy?
-            </h1>
-            <p className="text-brand-100 text-lg mb-8">
-              Conecta con plomeros, electricistas y desarrolladores calificados en minutos.
+            <h1 className="mb-4 text-3xl font-bold sm:text-4xl">¿Que problema necesitas resolver hoy?</h1>
+            <p className="mb-8 text-lg text-brand-100">
+              Publica una necesidad y recibe propuestas de profesionales verificados en poco tiempo.
             </p>
-            <Link 
+            <Link
               to="/create-petition"
-              className="inline-flex items-center px-6 py-3 bg-white text-brand-600 font-bold rounded-lg shadow hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center rounded-lg bg-white px-6 py-3 font-bold text-brand-600 shadow transition-colors hover:bg-slate-100"
             >
-              + Publicar Nueva Solicitud
+              + Publicar nueva solicitud
             </Link>
           </div>
         </section>
 
-        {/* SECCIÓN 2: TUS SOLICITUDES ACTIVAS (Dinámico) */}
+        <section className="grid gap-4 md:grid-cols-3">
+          <div className="panel p-5">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Solicitudes recientes</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{stats.total}</p>
+          </div>
+          <div className="panel p-5">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Activas</p>
+            <p className="mt-2 text-3xl font-bold text-green-600">{stats.open}</p>
+          </div>
+          <div className="panel p-5">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Adjudicadas</p>
+            <p className="mt-2 text-3xl font-bold text-brand-600">{stats.awarded}</p>
+          </div>
+        </section>
+
         <section>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-2 h-8 bg-brand-500 rounded-full"></span>
-              Tus Solicitudes Activas
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="section-title flex items-center gap-2">
+              <span className="h-8 w-2 rounded-full bg-brand-500" />
+              Tus solicitudes activas
             </h2>
           </div>
-          
-          {/* ESTADO DE CARGA (Skeletons) */}
+
           {loading && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-               {[1, 2, 3].map(i => (
-                 <div key={i} className="h-48 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse"></div>
-               ))}
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-48 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800" />
+              ))}
             </div>
           )}
 
-          {/* LISTA DE PETICIONES */}
           {!loading && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              
-              {/* Mapeo de datos reales */}
+              {myPetitions.length === 0 && (
+                <div className="panel col-span-full p-10 text-center">
+                  <p className="text-lg font-semibold text-slate-900 dark:text-white">Todavia no tienes solicitudes</p>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Publica la primera para empezar a recibir postulaciones.</p>
+                </div>
+              )}
+
               {myPetitions.map((petition) => (
-                <div key={petition.idPetition} className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 hover:border-brand-300 transition-colors flex flex-col justify-between h-full">
+                <article
+                  key={petition.idPetition}
+                  className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-brand-300 dark:border-slate-800 dark:bg-slate-900"
+                >
                   <div>
-                    <div className="flex justify-between items-start mb-3">
-                      {/* Badge de Tipo (Color dinámico) */}
-                      <span className={`text-xs font-semibold px-2.5 py-0.5 rounded 
-                        ${petition.typePetitionName === 'Urgencia' 
-                          ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' 
-                          : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                        }`}>
+                    <div className="mb-3 flex items-start justify-between">
+                      <span
+                        className={`rounded px-2.5 py-0.5 text-xs font-semibold ${
+                          petition.typePetitionName === 'Urgencia'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        }`}
+                      >
                         {petition.typePetitionName}
                       </span>
-                      {/* Fecha Relativa */}
-                      <span className="text-xs text-slate-500 capitalize">
+                      <span className="text-xs text-slate-500">
                         {formatDistanceToNow(new Date(petition.dateSince), { addSuffix: true, locale: es })}
                       </span>
                     </div>
 
-                    <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-1 line-clamp-1">
-                      {petition.professionName}
-                    </h3>
-                    
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-2 min-h-[40px]">
-                      {petition.description}
-                    </p>
+                    <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-white">{petition.professionName}</h3>
+                    <p className="mb-4 min-h-[40px] text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{petition.description}</p>
 
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
+                    <div className="mb-4 flex items-center gap-2 text-xs text-slate-500">
                       <span>📍 {petition.cityName}</span>
                       <span>•</span>
-                      <span className={petition.stateName === 'PUBLICADA' ? 'text-green-600 font-medium' : 'text-slate-500'}>
-                        {petition.stateName}
-                      </span>
+                      <span className={petition.stateName === 'PUBLICADA' ? 'font-medium text-green-600' : ''}>{petition.stateName}</span>
                     </div>
                   </div>
-                  
-                  {/* Pie de tarjeta */}
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                    <div className="flex -space-x-2">
-                       {/* Placeholder de postulantes (futura funcionalidad) */}
-                       <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs text-slate-400 border-2 border-white dark:border-slate-800" title="Aún no hay postulantes">?</div>
-                    </div>
-                    
-                    {/* ENLACE AL DETALLE (Corregido) */}
-                    <Link 
-                      to={`/petition/${petition.idPetition}`}
-                      className="text-sm font-medium text-brand-600 hover:text-brand-700 hover:underline"
-                    >
+
+                  <div className="flex items-center justify-end border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <Link to={`/petition/${petition.idPetition}`} className="text-sm font-semibold text-brand-600 transition hover:text-brand-700">
                       Ver detalles →
                     </Link>
                   </div>
-                </div>
+                </article>
               ))}
 
-              {/* TARJETA "CREAR NUEVA" (Siempre visible al final) */}
-              <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center text-center text-slate-500 min-h-[200px] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer">
-                <Link to="/create-petition" className="flex flex-col items-center w-full h-full justify-center">
-                  <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <span className="text-2xl text-slate-400 group-hover:text-brand-500 transition-colors">+</span>
+              <div className="group flex min-h-[220px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 p-6 text-center text-slate-500 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/40">
+                <Link to="/create-petition" className="flex h-full w-full flex-col items-center justify-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 transition-transform group-hover:scale-110 dark:bg-slate-800">
+                    <span className="text-2xl text-slate-400 transition-colors group-hover:text-brand-500">+</span>
                   </div>
-                  <p className="mb-1 font-medium group-hover:text-brand-600 transition-colors">
-                    {myPetitions.length === 0 ? "Aún no tienes solicitudes." : "¿Necesitas algo más?"}
-                  </p>
-                  <span className="text-sm font-bold text-brand-600 hover:underline">
-                    Crear solicitud
-                  </span>
+                  <p className="mb-1 font-medium transition-colors group-hover:text-brand-600">Crear nueva solicitud</p>
+                  <span className="text-sm font-bold text-brand-600">Continuar</span>
                 </Link>
               </div>
-
             </div>
           )}
         </section>
-
-        {/* SECCIÓN 3: PROFESIONALES DESTACADOS (Estática por ahora) */}
-        <section>
-          <div className="flex justify-between items-end mb-6">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-2 h-8 bg-amber-400 rounded-full"></span>
-              Profesionales Recomendados
-            </h2>
-            <a href="#" className="text-sm text-brand-600 font-medium hover:underline">Ver todos</a>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* PROVEEDOR 1 */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 text-center group hover:shadow-md transition-all">
-              <div className="relative inline-block">
-                <img 
-                  src="https://ui-avatars.com/api/?name=Martin+L&background=random" 
-                  className="w-20 h-20 rounded-full mx-auto mb-3 object-cover group-hover:scale-105 transition-transform" 
-                  alt="Avatar"
-                />
-                <span className="absolute bottom-1 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></span>
-              </div>
-              <h3 className="font-bold text-slate-900 dark:text-white">Martín López</h3>
-              <p className="text-sm text-brand-600 font-medium mb-2">Electricista</p>
-              <div className="flex justify-center text-amber-400 text-sm mb-4">★★★★★ <span className="text-slate-400 ml-1">(42)</span></div>
-              <button className="w-full py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                Ver Perfil
-              </button>
-            </div>
-
-            {/* PROVEEDOR 2 */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 text-center group hover:shadow-md transition-all">
-              <div className="relative inline-block">
-                <img 
-                  src="https://ui-avatars.com/api/?name=Sofia+M&background=random" 
-                  className="w-20 h-20 rounded-full mx-auto mb-3 object-cover group-hover:scale-105 transition-transform" 
-                  alt="Avatar"
-                />
-              </div>
-              <h3 className="font-bold text-slate-900 dark:text-white">Sofía Mendez</h3>
-              <p className="text-sm text-brand-600 font-medium mb-2">Desarrolladora Web</p>
-              <div className="flex justify-center text-amber-400 text-sm mb-4">★★★★☆ <span className="text-slate-400 ml-1">(15)</span></div>
-              <button className="w-full py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                Ver Perfil
-              </button>
-            </div>
-          </div>
-        </section>
-
       </main>
     </div>
   );
