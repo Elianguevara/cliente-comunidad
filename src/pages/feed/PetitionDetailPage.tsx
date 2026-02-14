@@ -8,7 +8,7 @@ import type { PostulationResponse } from '../../types/postulation.types';
 import { format, formatDistanceToNow, isAfter, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-// IMPORTANTE: Importamos nuestro nuevo componente de calificaciones
+// Importamos el componente de calificaciones
 import { RateProviderForm } from '../../components/reviews/RateProviderForm';
 
 interface ApiErrorPayload {
@@ -45,7 +45,7 @@ export const PetitionDetailPage = () => {
   const [showApplyForm, setShowApplyForm] = useState(false);
   const [alreadyApplied, setAlreadyApplied] = useState(false);
 
-  // NUEVOS ESTADOS PARA CALIFICACIONES
+  // Estados para controlar el formulario de calificación
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [hasRated, setHasRated] = useState(false);
 
@@ -166,7 +166,7 @@ export const PetitionDetailPage = () => {
 
     return {
       total,
-      winner, // Exportamos al ganador completo para tener su ID al calificar
+      winner, // Exportamos al ganador completo con su providerId
       winnerName: winner?.providerName ?? null,
       averageBudget,
     };
@@ -439,7 +439,6 @@ export const PetitionDetailPage = () => {
                   </div>
                 ) : (
                   <form onSubmit={handleApply} className="space-y-4">
-                    {/* ... (formulario de postulación intacto) ... */}
                     <div>
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white">Completa tu propuesta</h4>
                     </div>
@@ -488,9 +487,7 @@ export const PetitionDetailPage = () => {
                   </button>
                 )}
 
-                {/* === NUEVA SECCIÓN DE CALIFICACIÓN ===
-                  Si la solicitud finalizó, tenemos un ganador, y aún no ha calificado.
-                */}
+                {/* === SECCIÓN DE CALIFICACIÓN === */}
                 {isFinalizada && customerMetrics.winner && !hasRated && (
                   <div className="mt-4">
                     {!showRatingForm ? (
@@ -507,11 +504,9 @@ export const PetitionDetailPage = () => {
                           <button onClick={() => setShowRatingForm(false)} className="text-xs text-slate-500 hover:text-slate-700">Cancelar</button>
                         </div>
                         
-                        {/* NOTA: Usamos 'providerId' o 'idProvider' dependiendo de cómo esté 
-                           definida tu interfaz PostulationResponse. 
-                        */}
+                        {/* AQUÍ ESTÁ EL CAMBIO FINAL: Ya usamos providerId directamente */}
                         <RateProviderForm 
-                          providerId={(customerMetrics.winner as any).providerId || (customerMetrics.winner as any).idProvider} 
+                          providerId={customerMetrics.winner.providerId} 
                           onSuccess={() => setHasRated(true)} 
                         />
                       </div>

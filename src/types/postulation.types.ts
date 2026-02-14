@@ -9,6 +9,9 @@ export interface PostulationRequest {
 export interface PostulationResponse {
   idPostulation: number;
   description: string;
+  
+  providerId: number; // <--- ¡ESTA ES LA LÍNEA NUEVA!
+  
   providerName: string;
   providerImage: string | null;
   petitionTitle: string;
