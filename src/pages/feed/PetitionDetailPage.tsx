@@ -8,8 +8,9 @@ import type { PostulationResponse } from '../../types/postulation.types';
 import { format, formatDistanceToNow, isAfter, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-// Importamos el componente de calificaciones
+// Importamos el componente de calificaciones y la nueva validación
 import { RateProviderForm } from '../../components/reviews/RateProviderForm';
+import { checkIfProviderRated } from '../../services/grade.service';
 
 interface ApiErrorPayload {
   message?: string;
@@ -48,6 +49,8 @@ export const PetitionDetailPage = () => {
   // Estados para controlar el formulario de calificación
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+  // Nuevo estado para guardar la reseña que se acaba de enviar en memoria
+  const [submittedReview, setSubmittedReview] = useState<{rating: number, comment: string} | null>(null);
 
   const [offer, setOffer] = useState({ description: '', budget: '' });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -69,6 +72,16 @@ export const PetitionDetailPage = () => {
         setPetition(petitionData);
         setPostulations(postulationsData);
         setAlreadyApplied(hasApplied);
+
+        // NUEVO BLOQUE: Verificamos si el cliente ya calificó al proveedor ganador
+        if (role === 'CUSTOMER' && petitionData.stateName === 'FINALIZADA') {
+          const winner = postulationsData.find((p) => p.isWinner);
+          if (winner?.providerId) {
+            const yaCalifico = await checkIfProviderRated(winner.providerId);
+            setHasRated(yaCalifico);
+          }
+        }
+
       } catch (error) {
         console.error('Error al cargar datos:', error);
         setFeedback({ type: 'error', message: 'No se pudo cargar la solicitud.' });
@@ -166,7 +179,7 @@ export const PetitionDetailPage = () => {
 
     return {
       total,
-      winner, // Exportamos al ganador completo con su providerId
+      winner,
       winnerName: winner?.providerName ?? null,
       averageBudget,
     };
@@ -504,20 +517,57 @@ export const PetitionDetailPage = () => {
                           <button onClick={() => setShowRatingForm(false)} className="text-xs text-slate-500 hover:text-slate-700">Cancelar</button>
                         </div>
                         
-                        {/* AQUÍ ESTÁ EL CAMBIO FINAL: Ya usamos providerId directamente */}
                         <RateProviderForm 
                           providerId={customerMetrics.winner.providerId} 
-                          onSuccess={() => setHasRated(true)} 
+                          onSuccess={(ratingSent, commentSent) => {
+                            setHasRated(true);
+                            setSubmittedReview({ rating: ratingSent, comment: commentSent });
+                            setShowRatingForm(false);
+                          }} 
                         />
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Mensaje de éxito post-calificación */}
+                {/* === NUEVO DISEÑO PARA MOSTRAR LA CALIFICACIÓN EMITIDA O YA EXISTENTE === */}
                 {isFinalizada && hasRated && (
-                  <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-center text-sm font-bold text-green-700">
-                    ¡Gracias por tu calificación! Esto ayuda a mejorar la comunidad.
+                  <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm dark:border-green-900/50 dark:bg-green-900/20">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-sm font-bold text-green-800 dark:text-green-300">
+                        {submittedReview ? `Tu calificación para ${customerMetrics.winnerName}` : `Ya calificaste a ${customerMetrics.winnerName}`}
+                      </h3>
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-900/50 dark:text-green-400">
+                        ✓ Completado
+                      </span>
+                    </div>
+                    
+                    {submittedReview ? (
+                      <>
+                        {/* Renderizamos las estrellas si está en memoria */}
+                        <div className="flex text-yellow-400 text-lg mb-2 drop-shadow-sm">
+                          {'★'.repeat(submittedReview.rating)}
+                          <span className="text-gray-300 dark:text-slate-600">
+                            {'★'.repeat(5 - submittedReview.rating)}
+                          </span>
+                        </div>
+
+                        {/* Renderizamos el comentario si existe */}
+                        {submittedReview.comment ? (
+                          <p className="text-sm text-green-700 dark:text-green-400 italic">
+                            "{submittedReview.comment}"
+                          </p>
+                        ) : (
+                          <p className="text-xs text-green-600/70 dark:text-green-400/70 italic">
+                            Sin comentario escrito.
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-green-700 mt-2">
+                        Gracias por haber evaluado este trabajo. Tu reseña ya se encuentra registrada en el sistema.
+                      </p>
+                    )}
                   </div>
                 )}
               </>

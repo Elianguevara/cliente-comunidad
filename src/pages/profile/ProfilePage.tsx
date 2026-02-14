@@ -13,6 +13,9 @@ import type { UpdateProfileData } from '../../services/user.service';
 
 import type { UserProfile } from '../../types/user.types';
 
+// NUEVO: Importamos la lista de reseñas
+import { ProviderReviewsList } from '../../components/reviews/ProviderReviewsList';
+
 export const ProfilePage = () => {
   const navigate = useNavigate();
   
@@ -21,6 +24,9 @@ export const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Estado para forzar recarga de reseñas (útil si más adelante añades edición o borrado)
+  const [refreshReviews, setRefreshReviews] = useState(0);
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -177,6 +183,24 @@ export const ProfilePage = () => {
               </div>
             </div>
             
+            {/* NUEVA SECCIÓN: Reseñas del Proveedor */}
+            {/* AHORA LE PASAMOS EL providerId CORRECTO QUE VIENE DEL BACKEND */}
+            {profile.role === 'PROVIDER' && profile.providerId && (
+              <>
+                <hr className="border-slate-100 dark:border-slate-800 my-8" />
+                <div className="mt-8">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Lo que dicen tus clientes</h3>
+                  <p className="text-sm text-slate-500 mb-6">Aquí puedes ver todas las calificaciones y opiniones que has recibido por tus trabajos finalizados.</p>
+                  
+                  {/* Integración del componente de lista de reseñas */}
+                  <ProviderReviewsList 
+                    providerId={profile.providerId} 
+                    refreshTrigger={refreshReviews} 
+                  />
+                </div>
+              </>
+            )}
+
             <hr className="border-slate-100 dark:border-slate-800 my-8" />
 
             {/* Zona de Peligro */}

@@ -25,3 +25,10 @@ export const getProviderReviews = async (
   const response = await client.get(`/grades/provider/${providerId}?page=${page}&size=${size}&sort=idGradeProvider,desc`);
   return response.data;
 };
+
+// Al final de src/services/grade.service.ts agrega:
+
+export const checkIfProviderRated = async (providerId: number): Promise<boolean> => {
+  const response = await client.get(`/grades/check-rated/${providerId}`);
+  return response.data;
+};

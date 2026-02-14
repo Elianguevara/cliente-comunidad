@@ -1,19 +1,19 @@
-// En src/types/user.types.ts
+// src/types/user.types.ts
 export interface UserProfile {
   id: number;
+  providerId?: number; // <--- NUEVO
+  customerId?: number; // <--- NUEVO
   name: string;
   lastname: string;
   email: string;
-  role: 'CUSTOMER' | 'PROVIDER' | 'ADMIN'; // Ajustado a lo que envía Java
+  role: 'CUSTOMER' | 'PROVIDER' | 'ADMIN';
   profileImage?: string;
   
-  // Campos específicos (pueden venir null desde Java)
   phone?: string;
   description?: string;
   profession?: string;
   address?: string;
 
-  // Estadísticas
   stats: {
     label: string;
     value: string;

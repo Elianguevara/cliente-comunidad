@@ -2,9 +2,11 @@
 import React, { useState } from 'react';
 import { rateProvider } from '../../services/grade.service';
 import type { RateRequest } from '../../types/review.types';
+
 interface RateProviderFormProps {
   providerId: number; // El ID del proveedor que se va a calificar
-  onSuccess?: () => void; // Callback opcional para cerrar un modal o recargar datos
+  // MODIFICADO: Ahora exporta el rating y el comment para que el padre los dibuje
+  onSuccess?: (rating: number, comment: string) => void; 
 }
 
 export const RateProviderForm: React.FC<RateProviderFormProps> = ({ providerId, onSuccess }) => {
@@ -31,8 +33,8 @@ export const RateProviderForm: React.FC<RateProviderFormProps> = ({ providerId, 
 
     try {
       await rateProvider(request);
-      alert('¡Calificación enviada con éxito!');
-      if (onSuccess) onSuccess();
+      // MODIFICADO: Enviamos los datos escritos de vuelta a la vista principal
+      if (onSuccess) onSuccess(rating, comment); 
     } catch (err: any) {
       setError(err.response?.data?.message || 'Ocurrió un error al enviar la calificación.');
     } finally {
