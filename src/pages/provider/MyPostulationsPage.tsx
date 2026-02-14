@@ -9,19 +9,24 @@ import { es } from 'date-fns/locale';
 export const MyPostulationsPage = () => {
   const [postulations, setPostulations] = useState<PostulationResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA'>('ALL');
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadPostulations();
+    void loadPostulations();
   }, []);
 
   const loadPostulations = async () => {
     try {
       setLoading(true);
+      setError('');
       const data = await postulationService.getMyPostulations();
       setPostulations(data.content || []); // .content por la paginación de Spring
     } catch (error) {
-      console.error("Error cargando postulaciones:", error);
+      console.error('Error cargando postulaciones:', error);
+      setError('No pudimos cargar tus postulaciones. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -41,50 +46,177 @@ export const MyPostulationsPage = () => {
     );
   };
 
+  const filteredPostulations = postulations.filter((postulation) => {
+    const matchesSearch =
+      postulation.petitionTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      postulation.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesState = statusFilter === 'ALL' || postulation.stateName === statusFilter;
+
+    return matchesSearch && matchesState;
+  });
+
+  const stats = {
+    total: postulations.length,
+    pending: postulations.filter((p) => p.stateName === 'PENDIENTE').length,
+    accepted: postulations.filter((p) => p.stateName === 'ACEPTADA').length,
+    rejected: postulations.filter((p) => p.stateName === 'RECHAZADA').length,
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="app-shell">
       <Navbar />
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-8">Mis Postulaciones</h1>
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        <section className="panel mb-6 p-6 md:p-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Mis Postulaciones</h1>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                Gestiona el estado de tus propuestas y hace seguimiento de tus oportunidades activas.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void loadPostulations()}
+              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Actualizar
+            </button>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <article className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Total</p>
+              <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{stats.total}</p>
+            </article>
+            <article className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-900/20">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Pendientes</p>
+              <p className="mt-2 text-2xl font-black text-amber-800 dark:text-amber-200">{stats.pending}</p>
+            </article>
+            <article className="rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900/40 dark:bg-green-900/20">
+              <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">Aceptadas</p>
+              <p className="mt-2 text-2xl font-black text-green-800 dark:text-green-200">{stats.accepted}</p>
+            </article>
+            <article className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-900/20">
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Rechazadas</p>
+              <p className="mt-2 text-2xl font-black text-red-800 dark:text-red-200">{stats.rejected}</p>
+            </article>
+          </div>
+        </section>
+
+        {!loading && !error && postulations.length > 0 && (
+          <section className="panel mb-6 p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="w-full lg:max-w-md">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar por trabajo o texto de propuesta"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-brand-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {(['ALL', 'PENDIENTE', 'ACEPTADA', 'RECHAZADA'] as const).map((status) => {
+                  const active = statusFilter === status;
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setStatusFilter(status)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        active
+                          ? 'bg-brand-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {status === 'ALL' ? 'Todas' : status}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
 
         {loading ? (
-          <div className="text-center py-10">Cargando tus ofertas...</div>
+          <div className="grid gap-4">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="h-36 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-center text-red-700 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-300">
+            <p>{error}</p>
+            <button
+              type="button"
+              onClick={() => void loadPostulations()}
+              className="mt-3 text-sm font-semibold text-red-700 underline dark:text-red-300"
+            >
+              Reintentar
+            </button>
+          </div>
         ) : postulations.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 p-12 rounded-2xl border border-dashed border-slate-300 text-center">
-            <p className="text-slate-500">Aún no te has postulado a ninguna búsqueda.</p>
-            <button onClick={() => navigate('/feed')} className="mt-4 text-brand-600 font-bold hover:underline">Ir al Feed de trabajos</button>
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-900">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-2xl dark:bg-slate-800">
+              🧭
+            </div>
+            <p className="text-slate-500 dark:text-slate-400">Aun no te postulaste a ninguna busqueda.</p>
+            <button onClick={() => navigate('/feed')} className="mt-4 text-sm font-bold text-brand-600 hover:underline">
+              Ir al feed de trabajos
+            </button>
+          </div>
+        ) : filteredPostulations.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-900">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-2xl dark:bg-slate-800">
+              🔎
+            </div>
+            <p className="text-slate-500 dark:text-slate-400">No hay postulaciones que coincidan con tus filtros.</p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {postulations.map((p) => (
+            {filteredPostulations.map((p) => (
               <div 
                 key={p.idPostulation} 
-                className={`bg-white dark:bg-slate-900 p-6 rounded-xl border transition-all hover:shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4
-                ${p.isWinner ? 'border-green-500 ring-1 ring-green-500' : 'border-slate-200 dark:border-slate-800'}`}
+                className={`panel p-6 transition-all hover:-translate-y-0.5 hover:shadow-md flex flex-col gap-4 md:flex-row md:items-center md:justify-between
+                ${p.isWinner ? 'border-green-400 ring-1 ring-green-400 dark:border-green-700 dark:ring-green-700' : ''}`}
               >
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-bold text-lg text-slate-900 dark:text-white">{p.petitionTitle}</h3>
+                  <div className="mb-2 flex flex-wrap items-center gap-3">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">{p.petitionTitle}</h3>
                     {getStatusBadge(p.stateName)}
+                    {p.isWinner && (
+                      <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-bold text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        ADJUDICADA A TI
+                      </span>
+                    )}
                   </div>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm mb-3 line-clamp-2 italic">
-                    Mi propuesta: "{p.description}"
+                  <p className="mb-3 text-sm italic text-slate-600 line-clamp-2 dark:text-slate-400">
+                    "{p.description}"
                   </p>
-                  <div className="flex gap-4 text-xs text-slate-500">
-                    <span>📅 {p.datePostulation ? format(new Date(p.datePostulation), "dd 'de' MMMM", { locale: es }) : 'Reciente'}</span>
-                    {p.budget && <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">💰 ${p.budget}</span>}
+                  <div className="flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="rounded-md bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
+                      📅 {p.datePostulation ? format(new Date(p.datePostulation), "dd 'de' MMMM", { locale: es }) : 'Reciente'}
+                    </span>
+                    {p.budget !== undefined && (
+                      <span className="rounded-md bg-slate-100 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        💰 ${p.budget}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="flex w-full gap-2 md:w-auto">
                   <button 
                     onClick={() => navigate(`/petition/${p.petitionId}`)}
-                    className="flex-1 md:flex-none px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-bold hover:bg-slate-200"
+                    className="flex-1 rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 md:flex-none"
                   >
                     Ver Trabajo
                   </button>
                   {p.isWinner && (
-                    <button className="flex-1 md:flex-none px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700">
+                    <button className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700 md:flex-none">
                       Contactar Cliente
                     </button>
                   )}
