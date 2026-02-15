@@ -147,7 +147,7 @@ export const PetitionDetailPage = () => {
         if (role === 'CUSTOMER' && petitionData.stateName === 'FINALIZADA') {
           const winner = postulationsData.find((p) => p.isWinner);
           if (winner?.providerId) {
-            const yaCalifico = await checkIfProviderRated(winner.providerId);
+            const yaCalifico = await checkIfProviderRated(winner.providerId, petitionData.idPetition);
             setHasRated(yaCalifico);
           }
         }
@@ -653,6 +653,7 @@ export const PetitionDetailPage = () => {
                         
                         <RateProviderForm 
                           providerId={customerMetrics.winner.providerId} 
+                          petitionId={petition.idPetition}
                           onSuccess={(ratingSent, commentSent) => {
                             setHasRated(true);
                             setSubmittedReview({ rating: ratingSent, comment: commentSent });

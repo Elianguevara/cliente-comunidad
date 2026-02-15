@@ -5,11 +5,12 @@ import type { RateRequest } from '../../types/review.types';
 
 interface RateProviderFormProps {
   providerId: number; // El ID del proveedor que se va a calificar
+  petitionId: number; // La peticion finalizada sobre la que se califica
   // MODIFICADO: Ahora exporta el rating y el comment para que el padre los dibuje
   onSuccess?: (rating: number, comment: string) => void; 
 }
 
-export const RateProviderForm: React.FC<RateProviderFormProps> = ({ providerId, onSuccess }) => {
+export const RateProviderForm: React.FC<RateProviderFormProps> = ({ providerId, petitionId, onSuccess }) => {
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -27,6 +28,7 @@ export const RateProviderForm: React.FC<RateProviderFormProps> = ({ providerId, 
 
     const request: RateRequest = {
       targetId: providerId,
+      petitionId,
       rating: rating,
       comment: comment.trim() !== '' ? comment : undefined,
     };
