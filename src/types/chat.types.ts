@@ -5,18 +5,23 @@ export interface MessageRequest {
 }
 
 export interface MessageResponse {
-  idMessage: number;     // Long en Java -> number en TS
+  idMessage: number;
   content: string;
-  createdAt: string;     // LocalDateTime viaja como ISO String
+  sentAt: string; // Fecha en formato ISO
   senderId: number;
   senderName: string;
-  isMine: boolean;       // ¡Muy útil para el frontend!
+  isMine: boolean; // Utilidad para el frontend para saber si el mensaje es del usuario actual
 }
 
 export interface ConversationResponse {
   idConversation: number;
   petitionId: number;
   petitionTitle: string;
-  otherUserName: string;       // El nombre de la persona con la que hablas
-  otherUserProfileImage?: string; // Puede ser null si no tiene foto
+  otherParticipantId: number;
+  otherParticipantName: string;
+  otherParticipantRole: string;
+  otherParticipantImage?: string;
+  lastMessage?: string;
+  updatedAt: string;
+  unreadCount: number;
 }

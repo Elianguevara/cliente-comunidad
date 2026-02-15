@@ -10,6 +10,10 @@ import { ClientHomePage } from '../pages/client/ClientHomePage';
 import { PetitionDetailPage } from '../pages/feed/PetitionDetailPage';
 import { MyPostulationsPage, ProviderPublicProfilePage } from '../pages/provider';
 
+// --- NUEVAS IMPORTACIONES DEL CHAT ---
+import { ChatRoomPage } from '../pages/chat/ChatRoomPage';
+ import { ChatInboxPage } from '../pages/chat/ChatInboxPage'; // Descoméntalo cuando crees la bandeja de entrada
+
 // Importación de Guardias
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -23,7 +27,6 @@ const RequireCustomer = () => {
 };
 
 // --- GUARDIA DE ROL: Solo Proveedores ---
-// Nueva guardia para asegurar que solo proveedores vean sus postulaciones
 const RequireProvider = () => {
   const role = localStorage.getItem('role');
   if (role !== 'PROVIDER') {
@@ -53,16 +56,19 @@ export const AppRouter = () => {
         {/* --- Rutas Privadas (Requieren Token) --- */}
         <Route element={<ProtectedRoute />}>
           
-          {/* 1. Rutas Comunes */}
+          {/* 1. Rutas Comunes (Accesibles por Clientes y Proveedores) */}
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/petition/:id" element={<PetitionDetailPage />} />
-          {/* ---> NUEVA RUTA INTEGRADA: PERFIL PÚBLICO DEL PROVEEDOR <--- */}
           <Route path="/provider/:id" element={<ProviderPublicProfilePage />} />
+          
+          {/* ---> NUEVAS RUTAS DE CHAT <--- */}
+          { <Route path="/chat/inbox" element={<ChatInboxPage />} /> }
+          <Route path="/chat/new" element={<ChatRoomPage />} />
+          <Route path="/chat/:id" element={<ChatRoomPage />} />
           
           {/* 2. Zona de Proveedores */}
           <Route element={<RequireProvider />}>
             <Route path="/feed" element={<FeedPage />} />
-            {/* Nueva ruta para que el proveedor vea sus éxitos o rechazos */}
             <Route path="/my-postulations" element={<MyPostulationsPage />} />
           </Route>
           
