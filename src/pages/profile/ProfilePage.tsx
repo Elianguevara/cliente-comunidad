@@ -1,40 +1,36 @@
 import { useState, useEffect } from 'react';
-// Importamos tipos de React por separado (para verbatimModuleSyntax)
 import type { ChangeEvent, FormEvent } from 'react';
-
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 
-// CORRECCIÓN AQUÍ: Importación nombrada (con llaves)
 import { authService } from '../../services/auth.service';
-// Importamos el servicio y el tipo de datos para actualización
 import { userService } from '../../services/user.service';
 import type { UpdateProfileData } from '../../services/user.service';
 
-import type { UserProfile } from '../../types/user.types';
+// Importamos el servicio de metadata y provider
+import { metadataService } from '../../services/metadata.service';
+import { providerService } from '../../services/provider.service';
+import type { City, Profession } from '../../types/metadata.types';
 
-// NUEVO: Importamos la lista de reseñas
+import type { UserProfile } from '../../types/user.types';
 import { ProviderReviewsList } from '../../components/reviews/ProviderReviewsList';
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
   
-  // Estados
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-
-  // Estado para forzar recarga de reseñas (útil si más adelante añades edición o borrado)
   const [refreshReviews, setRefreshReviews] = useState(0);
 
-  // Cargar datos al montar el componente
   useEffect(() => {
     loadUserProfile();
   }, []);
 
   const loadUserProfile = async () => {
     try {
+      setLoading(true);
       const data = await userService.getProfile();
       setProfile(data);
     } catch (error) {
@@ -44,20 +40,14 @@ export const ProfilePage = () => {
     }
   };
 
-  const handleUpdateProfile = async (formData: UpdateProfileData) => {
-    try {
-      const updatedProfile = await userService.updateProfile(formData);
-      setProfile(updatedProfile);
-      setIsEditing(false); // Cerrar modal al terminar
-      alert('Perfil actualizado con éxito');
-    } catch (error) {
-      console.error("Error actualizando", error);
-      alert('No se pudo actualizar el perfil. Verifica los datos.');
-    }
+  const handleUpdateProfile = async () => {
+    // Cuando el modal termine de guardar, recargamos el perfil
+    await loadUserProfile();
+    setIsEditing(false);
   };
 
   const handleDeleteAccount = async () => {
-    if (window.confirm('¿Estás SEGURO? Esta acción no se puede deshacer. Perderás todo tu historial.')) {
+    if (window.confirm('¿Estás SEGURO? Esta acción no se puede deshacer.')) {
       try {
         setIsDeleting(true);
         await userService.deleteAccount();
@@ -65,13 +55,12 @@ export const ProfilePage = () => {
         authService.logout();
         navigate('/login');
       } catch {
-        alert('Error al eliminar cuenta. Intenta nuevamente.');
+        alert('Error al eliminar cuenta.');
         setIsDeleting(false);
       }
     }
   };
 
-  // Avatar dinámico: Si no hay imagen, usa UI Avatars con las iniciales
   const avatarUrl = profile?.profileImage 
     ? profile.profileImage 
     : profile 
@@ -91,17 +80,12 @@ export const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 relative">
       <Navbar />
-      
       <main className="max-w-4xl mx-auto px-4 py-8">
-        
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-          
-          {/* Header Colorido (Banner) */}
           <div className="h-32 bg-gradient-to-r from-brand-600 to-brand-400"></div>
           
           <div className="px-8 pb-8">
             <div className="relative flex justify-between items-end -mt-12 mb-6">
-              {/* Imagen de Perfil */}
               <img 
                 src={avatarUrl} 
                 alt="Profile" 
@@ -115,7 +99,6 @@ export const ProfilePage = () => {
               </button>
             </div>
 
-            {/* Datos Personales */}
             <div className="mb-6">
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
                 {profile.name} {profile.lastname}
@@ -129,7 +112,6 @@ export const ProfilePage = () => {
               </h1>
               <p className="text-slate-500 dark:text-slate-400">{profile.email}</p>
               
-              {/* Mostrar Descripción solo si es proveedor y existe */}
               {profile.role === 'PROVIDER' && profile.description && (
                 <p className="mt-4 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
                   {profile.description}
@@ -137,14 +119,10 @@ export const ProfilePage = () => {
               )}
             </div>
 
-            {/* Estadísticas con efecto Hover y Empty State */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
               {profile.stats && profile.stats.length > 0 ? (
                 profile.stats.map((stat, index) => (
-                  <div 
-                    key={index} 
-                    className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl text-center border border-slate-100 dark:border-slate-700 transition-transform duration-200 hover:scale-105 cursor-default"
-                  >
+                  <div key={index} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl text-center border border-slate-100 dark:border-slate-700 transition-transform duration-200 hover:scale-105 cursor-default">
                     <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
                     <p className="text-xs text-slate-500 uppercase tracking-wide mt-1">{stat.label}</p>
                   </div>
@@ -158,14 +136,11 @@ export const ProfilePage = () => {
 
             <hr className="border-slate-100 dark:border-slate-800 my-8" />
 
-            {/* Información de Contacto */}
             <div className="grid md:grid-cols-2 gap-8">
               <div>
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Información de Contacto</h3>
                 <div className="space-y-4">
                   <InfoRow icon="📧" label="Email" value={profile.email} />
-                  
-                  {/* Campos dinámicos: Solo se muestran si tienen valor */}
                   {profile.phone && <InfoRow icon="📱" label="Teléfono" value={profile.phone} />}
                   {profile.address && <InfoRow icon="📍" label="Ubicación" value={profile.address} />}
                   {profile.profession && <InfoRow icon="💼" label="Profesión" value={profile.profession} />}
@@ -183,58 +158,38 @@ export const ProfilePage = () => {
               </div>
             </div>
             
-            {/* NUEVA SECCIÓN: Reseñas del Proveedor */}
-            {/* AHORA LE PASAMOS EL providerId CORRECTO QUE VIENE DEL BACKEND */}
             {profile.role === 'PROVIDER' && profile.providerId && (
               <>
                 <hr className="border-slate-100 dark:border-slate-800 my-8" />
                 <div className="mt-8">
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Lo que dicen tus clientes</h3>
                   <p className="text-sm text-slate-500 mb-6">Aquí puedes ver todas las calificaciones y opiniones que has recibido por tus trabajos finalizados.</p>
-                  
-                  {/* Integración del componente de lista de reseñas */}
-                  <ProviderReviewsList 
-                    providerId={profile.providerId} 
-                    refreshTrigger={refreshReviews} 
-                  />
+                  <ProviderReviewsList providerId={profile.providerId} refreshTrigger={refreshReviews} />
                 </div>
               </>
             )}
 
             <hr className="border-slate-100 dark:border-slate-800 my-8" />
 
-            {/* Zona de Peligro */}
             <div className="p-4 border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 rounded-xl flex items-center justify-between flex-wrap gap-4">
               <div>
                 <p className="font-medium text-red-800 dark:text-red-300">Eliminar cuenta</p>
                 <p className="text-sm text-red-600 dark:text-red-400">Esta acción borrará todos tus datos permanentemente.</p>
               </div>
-              <button 
-                onClick={handleDeleteAccount}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-colors disabled:opacity-50"
-              >
+              <button onClick={handleDeleteAccount} disabled={isDeleting} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-colors disabled:opacity-50">
                 {isDeleting ? 'Eliminando...' : 'Eliminar mi cuenta'}
               </button>
             </div>
-
           </div>
         </div>
       </main>
 
-      {/* MODAL DE EDICIÓN */}
       {isEditing && (
-        <EditProfileModal 
-          user={profile} 
-          onClose={() => setIsEditing(false)} 
-          onSave={handleUpdateProfile} 
-        />
+        <EditProfileModal user={profile} onClose={() => setIsEditing(false)} onSaveSuccess={handleUpdateProfile} />
       )}
     </div>
   );
 };
-
-// --- Componentes Auxiliares ---
 
 const InfoRow = ({ icon, label, value }: { icon: string, label: string, value: string }) => (
   <div className="flex items-center gap-3 text-sm">
@@ -250,59 +205,114 @@ const InfoRow = ({ icon, label, value }: { icon: string, label: string, value: s
 interface EditModalProps {
   user: UserProfile;
   onClose: () => void;
-  onSave: (data: UpdateProfileData) => Promise<void>;
+  onSaveSuccess: () => Promise<void>;
 }
 
-const EditProfileModal = ({ user, onClose, onSave }: EditModalProps) => {
-  // Inicializamos el formulario con los datos actuales
+const EditProfileModal = ({ user, onClose, onSaveSuccess }: EditModalProps) => {
+  // Datos Generales de Usuario
   const [formData, setFormData] = useState<UpdateProfileData>({
     name: user.name,
     lastname: user.lastname,
     phone: user.phone || '',
     description: user.description || '',
-    profileImage: user.profileImage || '', // Nuevo campo para foto
+    profileImage: user.profileImage || '',
   });
+
+  // Datos específicos de Proveedor
+  const [idProfession, setIdProfession] = useState<number>(0);
+  const [selectedCities, setSelectedCities] = useState<number[]>([]);
+
+  // Opciones desde Backend
+  const [professions, setProfessions] = useState<Profession[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  // Cargar metadatos
+  useEffect(() => {
+    if (user.role === 'PROVIDER') {
+      const loadMetadata = async () => {
+        try {
+          const [profData, cityData] = await Promise.all([
+            metadataService.getAllProfessions(),
+            metadataService.getAllCities()
+          ]);
+          setProfessions(profData);
+          setCities(cityData);
+          
+          // NOTA: Como el UserProfile actual no trae los IDs de la profesión o ciudades del proveedor
+          // El usuario tendrá que seleccionarlos. 
+        } catch (error) {
+          console.error("Error cargando metadatos", error);
+        }
+      };
+      loadMetadata();
+    }
+  }, [user.role]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleCityToggle = (cityId: number) => {
+    setSelectedCities(prev => 
+      prev.includes(cityId) ? prev.filter(id => id !== cityId) : [...prev, cityId]
+    );
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await onSave(formData);
-    setSaving(false);
+    
+    try {
+      // 1. Guardar Datos Básicos (Usuario)
+      await userService.updateProfile(formData);
+
+      // 2. Si es proveedor, guardar Datos Profesionales
+      if (user.role === 'PROVIDER') {
+        if (idProfession === 0) {
+          alert("Debes seleccionar una profesión principal.");
+          setSaving(false);
+          return;
+        }
+        
+        await providerService.updateProfile({
+          idProfession: idProfession,
+          description: formData.description || '', // Enviamos la misma bio
+          cityIds: selectedCities
+        });
+      }
+
+      alert('Perfil actualizado con éxito');
+      await onSaveSuccess();
+    } catch (error) {
+      console.error("Error actualizando", error);
+      alert('Hubo un error al actualizar el perfil.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-all">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800 animate-fade-in-up">
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Editar Perfil</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-all overflow-y-auto py-10">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-slate-800 my-auto">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center sticky top-0 bg-white dark:bg-slate-900 z-10 rounded-t-2xl">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Editar Perfil</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
           
-          {/* Campo Foto de Perfil (URL) */}
           <div className="mb-2">
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Foto de Perfil (URL)
-            </label>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Foto de Perfil (URL)</label>
             <div className="flex gap-3 items-center">
               <input 
                 name="profileImage" 
                 value={formData.profileImage || ''} 
                 onChange={handleChange}
                 placeholder="https://ejemplo.com/foto.jpg"
-                className="flex-1 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                className="flex-1 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500 outline-none"
               />
-              {/* Previsualización pequeña */}
-              <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
+              <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0 shadow-sm">
                 {formData.profileImage ? (
                   <img src={formData.profileImage} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
@@ -310,83 +320,94 @@ const EditProfileModal = ({ user, onClose, onSave }: EditModalProps) => {
                 )}
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">Pega el enlace directo de una imagen (Google Drive, LinkedIn, etc).</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre</label>
-              <input 
-                name="name" 
-                value={formData.name} 
-                onChange={handleChange}
-                className="w-full p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition-all"
-                required
-              />
+              <input name="name" value={formData.name} onChange={handleChange} className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500 outline-none" required />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Apellido</label>
-              <input 
-                name="lastname" 
-                value={formData.lastname} 
-                onChange={handleChange}
-                className="w-full p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition-all"
-                required
-              />
+              <input name="lastname" value={formData.lastname} onChange={handleChange} className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500 outline-none" required />
             </div>
           </div>
 
-          {/* Campo solo para Clientes */}
           {user.role === 'CUSTOMER' && (
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Teléfono</label>
-              <input 
-                name="phone" 
-                value={formData.phone} 
-                onChange={handleChange}
-                className="w-full p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition-all"
-                placeholder="+54 9 ..."
-              />
+              <input name="phone" value={formData.phone} onChange={handleChange} className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500 outline-none" placeholder="+54 9 ..." />
             </div>
           )}
 
-          {/* Campo solo para Proveedores */}
+          {/* ZONA ESPECÍFICA PROVEEDOR */}
           {user.role === 'PROVIDER' && (
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción / Bio</label>
-              <textarea 
-                name="description" 
-                value={formData.description} 
-                onChange={handleChange}
-                rows={4}
-                className="w-full p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none transition-all resize-none"
-                placeholder="Cuenta algo sobre tus servicios..."
-              />
-            </div>
+            <>
+              <hr className="border-slate-100 dark:border-slate-800" />
+              
+              <div>
+                <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-1 uppercase tracking-wide">Profesión Principal</label>
+                <select 
+                  value={idProfession} 
+                  onChange={(e) => setIdProfession(Number(e.target.value))}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500 outline-none cursor-pointer"
+                  required
+                >
+                  <option value={0} disabled>Selecciona tu especialidad...</option>
+                  {professions.map(prof => (
+                    <option key={prof.idProfession} value={prof.idProfession}>{prof.name}</option>
+                  ))}
+                </select>
+                {/* NUEVO: Texto de aclaración para el proveedor */}
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 leading-tight">
+                  💡 <strong className="font-semibold">Nota:</strong> Esta será tu etiqueta principal para atraer clientes, pero <span className="underline decoration-brand-300">podrás postularte a cualquier otro tipo de trabajo</span> (ej. plomería, electricidad) si tienes los conocimientos necesarios. Usa tu Biografía para detallar tus otras habilidades.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase tracking-wide">Zonas de Trabajo</label>
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800">
+                  {cities.map(city => (
+                    <label key={city.idCity} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors">
+                      <input 
+                        type="checkbox" 
+                        className="accent-brand-600"
+                        checked={selectedCities.includes(city.idCity)}
+                        onChange={() => handleCityToggle(city.idCity)}
+                      />
+                      <span className="truncate" title={city.name}>{city.name}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">Selecciona todas las ciudades donde ofreces servicio.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-1 uppercase tracking-wide">Descripción / Biografía</label>
+                {/* NUEVO: Placeholder actualizado */}
+                <textarea 
+                  name="description" 
+                  value={formData.description} 
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all resize-none"
+                  placeholder="Ej: Soy gasista matriculado con 10 años de experiencia. También realizo trabajos generales de plomería y arreglos eléctricos menores..."
+                  required
+                />
+              </div>
+            </>
           )}
 
-          <div className="flex gap-3 mt-6">
-            <button 
-              type="button" 
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              disabled={saving}
-              className="flex-1 px-4 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Guardando...
-                </>
-              ) : 'Guardar Cambios'}
-            </button>
-          </div>
         </form>
+        
+        <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex gap-3 bg-slate-50 dark:bg-slate-900 rounded-b-2xl">
+          <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
+            Cancelar
+          </button>
+          <button type="button" onClick={handleSubmit} disabled={saving} className="flex-1 px-4 py-2.5 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 transition-colors shadow-sm disabled:opacity-50 flex justify-center items-center gap-2">
+            {saving ? 'Guardando...' : 'Guardar Cambios'}
+          </button>
+        </div>
       </div>
     </div>
   );
