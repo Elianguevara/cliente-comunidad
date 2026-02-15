@@ -392,6 +392,14 @@ export const PetitionDetailPage = () => {
                           <div className="space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="font-semibold text-slate-900 dark:text-white">{post.providerName}</p>
+                              
+                              {/* --- NUEVA UI: Promedio de estrellas del proveedor --- */}
+                              {post.providerRating !== undefined && post.providerRating > 0 && (
+                                <span className="flex items-center gap-1 bg-yellow-50 border border-yellow-200 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-700/50 dark:text-yellow-400 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm">
+                                  ⭐ {post.providerRating.toFixed(1)}
+                                </span>
+                              )}
+                              
                               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                                 {post.stateName}
                               </span>

@@ -14,6 +14,7 @@ export interface PostulationResponse {
   
   providerName: string;
   providerImage: string | null;
+  providerRating?: number;
   petitionTitle: string;
   petitionId: number;
   stateName: string;
