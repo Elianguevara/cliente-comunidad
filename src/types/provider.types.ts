@@ -1,7 +1,13 @@
-// src/types/provider.types.ts
-
-export interface ProviderProfileRequest {
-  idProfession: number;
-  description?: string; // Es opcional en Java (no tiene @NotNull)
-  cityIds: number[];    // List<Integer> en Java es number[] en TS
+export interface ProviderPublicProfile {
+  idProvider: number;
+  userId: number;
+  name: string;
+  lastname: string;
+  email: string; // Opcional, dependiendo de la privacidad
+  profileImage: string | null;
+  biography?: string;
+  professions: string[]; // Ej: ["Plomero", "Electricista"]
+  cities: string[];      // Ej: ["Mendoza Capital", "Godoy Cruz"]
+  rating: number;        // Promedio
+  totalReviews: number;  // Cantidad de reseñas
 }

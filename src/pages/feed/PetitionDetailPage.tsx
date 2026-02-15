@@ -460,16 +460,34 @@ export const PetitionDetailPage = () => {
                 ) : (
                   <div className="grid gap-4">
                     {sortedPostulations.map((post) => (
-                      <article key={post.idPostulation} className={`panel flex flex-col gap-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center sm:justify-between ${post.isWinner ? 'border-green-400 ring-1 ring-green-400 dark:border-green-700 dark:ring-green-700' : ''}`}>
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-sm font-black text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-                            {post.providerName.slice(0, 1).toUpperCase()}
-                          </div>
-                          <div className="space-y-1">
+                      <article 
+                        key={post.idPostulation} 
+                        className={`panel flex flex-col gap-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center sm:justify-between ${post.isWinner ? 'border-green-400 ring-1 ring-green-400 dark:border-green-700 dark:ring-green-700' : ''}`}
+                      >
+                        <div className="flex items-start gap-3 w-full sm:w-auto">
+                          {/* Avatar clickeable para ver perfil */}
+                          <button 
+                            onClick={() => navigate(`/provider/${post.providerId}`)}
+                            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-100 text-lg font-black text-brand-700 hover:ring-2 hover:ring-brand-400 transition-all dark:bg-brand-900/30 dark:text-brand-300 overflow-hidden"
+                            title="Ver perfil del proveedor"
+                          >
+                            {post.providerImage ? (
+                              <img src={post.providerImage} alt={post.providerName} className="h-full w-full object-cover" />
+                            ) : (
+                              post.providerName.slice(0, 1).toUpperCase()
+                            )}
+                          </button>
+
+                          <div className="space-y-1 w-full">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-semibold text-slate-900 dark:text-white">{post.providerName}</p>
+                              <button 
+                                onClick={() => navigate(`/provider/${post.providerId}`)}
+                                className="font-semibold text-slate-900 hover:text-brand-600 transition-colors dark:text-white dark:hover:text-brand-400"
+                              >
+                                {post.providerName}
+                              </button>
                               
-                              {/* --- NUEVA UI: Promedio de estrellas del proveedor --- */}
+                              {/* --- UI: Promedio de estrellas del proveedor --- */}
                               {post.providerRating !== undefined && post.providerRating > 0 && (
                                 <span className="flex items-center gap-1 bg-yellow-50 border border-yellow-200 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-700/50 dark:text-yellow-400 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm">
                                   ⭐ {post.providerRating.toFixed(1)}
@@ -483,15 +501,24 @@ export const PetitionDetailPage = () => {
                                 <span className="rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">Ganador</span>
                               )}
                             </div>
-                            <p className="line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
-                              {resolvePostulationDescription(post)}
-                            </p>
-                            <div className="flex flex-wrap gap-2 text-[11px]">
+                            
+                            {/* Propuesta del proveedor */}
+                            <div className="rounded-lg bg-slate-50 p-3 mt-2 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50">
+                              <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line">
+                                {resolvePostulationDescription(post)}
+                              </p>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2 text-[11px] mt-2">
                               {(() => {
                                 const resolvedBudget = resolvePostulationBudget(post);
-                                return (
-                                  <span className="rounded-md bg-slate-100 px-2 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                    Presupuesto: {resolvedBudget !== null ? `$${resolvedBudget}` : 'No informado'}
+                                return resolvedBudget !== null ? (
+                                  <span className="rounded-md bg-brand-50 border border-brand-100 px-2 py-1 font-bold text-brand-700 dark:bg-brand-900/30 dark:border-brand-800/50 dark:text-brand-300">
+                                    Presupuesto estimado: ${resolvedBudget}
+                                  </span>
+                                ) : (
+                                  <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+                                    Presupuesto: No informado
                                   </span>
                                 );
                               })()}
@@ -499,14 +526,30 @@ export const PetitionDetailPage = () => {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 sm:min-w-[120px] sm:justify-end">
+                        {/* Botones de Acción */}
+                        <div className="flex flex-col gap-2 sm:min-w-[140px] mt-4 sm:mt-0 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100 dark:border-slate-800 justify-center">
                           {post.isWinner ? (
-                            <span className="rounded-lg bg-green-50 px-3 py-1.5 text-xs font-bold text-green-700 dark:bg-green-900/20 dark:text-green-300">Seleccionado</span>
+                            <span className="text-center rounded-lg bg-green-50 px-3 py-2 text-xs font-bold text-green-700 dark:bg-green-900/20 dark:text-green-300">
+                              Proveedor Seleccionado
+                            </span>
                           ) : (
-                            !isAdjudicada && !isFinalizada && (
-                              <button onClick={() => handleAcceptProvider(post.idPostulation)} disabled={isAccepting !== null} className="rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-70">
-                                {isAccepting === post.idPostulation ? 'Aceptando...' : 'Aceptar'}
-                              </button>
+                            !isAdjudicada && !isFinalizada && !isCancelada && (
+                              <>
+                                <button 
+                                  onClick={() => handleAcceptProvider(post.idPostulation)} 
+                                  disabled={isAccepting !== null} 
+                                  className="w-full rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                  {isAccepting === post.idPostulation ? 'Aceptando...' : 'Aceptar Propuesta'}
+                                </button>
+                                
+                                <button 
+                                  onClick={() => navigate(`/chat/new?petitionId=${petition.idPetition}&providerId=${post.providerId}`)}
+                                  className="w-full rounded-lg bg-white border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 shadow-sm dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                                >
+                                  💬 Contactar
+                                </button>
+                              </>
                             )
                           )}
                         </div>

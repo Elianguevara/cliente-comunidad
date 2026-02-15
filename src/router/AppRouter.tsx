@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+
+// Importaciones de Páginas
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
@@ -6,7 +8,9 @@ import { FeedPage } from '../pages/feed/FeedPage';
 import { CreatePetitionPage } from '../pages/feed/CreatePetitionPage';
 import { ClientHomePage } from '../pages/client/ClientHomePage';
 import { PetitionDetailPage } from '../pages/feed/PetitionDetailPage';
-import { MyPostulationsPage } from '../pages/provider/MyPostulationsPage'; // Importar la nueva página
+import { MyPostulationsPage, ProviderPublicProfilePage } from '../pages/provider';
+
+// Importación de Guardias
 import { ProtectedRoute } from './ProtectedRoute';
 
 // --- GUARDIA DE ROL: Solo Clientes ---
@@ -52,6 +56,8 @@ export const AppRouter = () => {
           {/* 1. Rutas Comunes */}
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/petition/:id" element={<PetitionDetailPage />} />
+          {/* ---> NUEVA RUTA INTEGRADA: PERFIL PÚBLICO DEL PROVEEDOR <--- */}
+          <Route path="/provider/:id" element={<ProviderPublicProfilePage />} />
           
           {/* 2. Zona de Proveedores */}
           <Route element={<RequireProvider />}>
