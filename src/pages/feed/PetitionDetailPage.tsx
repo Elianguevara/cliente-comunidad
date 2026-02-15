@@ -21,6 +21,76 @@ interface TimelineStep {
   label: string;
 }
 
+const parseBudgetValue = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const sanitized = value
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/[^\d,.-]/g, '');
+
+    if (!sanitized) return null;
+
+    const hasDot = sanitized.includes('.');
+    const hasComma = sanitized.includes(',');
+    let normalized = sanitized;
+
+    if (hasDot && hasComma) {
+      // Toma como decimal el separador que aparece mas a la derecha.
+      const lastDot = sanitized.lastIndexOf('.');
+      const lastComma = sanitized.lastIndexOf(',');
+      if (lastDot > lastComma) {
+        normalized = sanitized.replace(/,/g, '');
+      } else {
+        normalized = sanitized.replace(/\./g, '').replace(',', '.');
+      }
+    } else if (hasComma) {
+      const commaCount = (sanitized.match(/,/g) ?? []).length;
+      const [left, right = ''] = sanitized.split(',');
+      const isThousands = commaCount > 1 || (right.length === 3 && left.length >= 1);
+      normalized = isThousands ? sanitized.replace(/,/g, '') : sanitized.replace(',', '.');
+    } else if (hasDot) {
+      const dotCount = (sanitized.match(/\./g) ?? []).length;
+      const [left, right = ''] = sanitized.split('.');
+      const isThousands = dotCount > 1 || (right.length === 3 && left.length >= 1);
+      normalized = isThousands ? sanitized.replace(/\./g, '') : sanitized;
+    }
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+};
+
+const resolvePostulationBudget = (postulation: PostulationResponse): number | null => {
+  const directBudget = parseBudgetValue(postulation.budget);
+  if (directBudget !== null) return directBudget;
+
+  // Fallback: algunos endpoints devuelven el monto dentro de otros campos de texto.
+  const maybePostulation = postulation as PostulationResponse & {
+    proposal?: string;
+    offer?: string;
+  };
+  const candidateText = [maybePostulation.proposal, maybePostulation.offer, postulation.description]
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .join(' ');
+
+  const match = candidateText.match(/(?:presupuesto|monto|total|\$)\s*[:\-]?\s*\$?\s*([\d.,]+)/i);
+  return match ? parseBudgetValue(match[1]) : null;
+};
+
+const resolvePostulationDescription = (postulation: PostulationResponse): string => {
+  const rawDescription = postulation.description ?? '';
+  // Algunos responses concatenan "Presupuesto: $X" al final del detalle.
+  return rawDescription
+    .replace(/\s*(?:[-|,]?\s*)?(?:presupuesto|monto|total)\s*[:\-]?\s*\$?\s*[\d.,]+\s*$/i, '')
+    .trim();
+};
+
 const getErrorMessage = (error: unknown, fallback: string): string => {
   if (typeof error === 'object' && error !== null) {
     const maybeError = error as { response?: { data?: ApiErrorPayload } };
@@ -173,8 +243,11 @@ export const PetitionDetailPage = () => {
   const customerMetrics = useMemo(() => {
     const total = postulations.length;
     const winner = postulations.find((post) => post.isWinner);
-    const averageBudget = total
-      ? Math.round(postulations.reduce((acc, item) => acc + (item.budget ?? 0), 0) / total)
+    const budgets = postulations
+      .map(resolvePostulationBudget)
+      .filter((budget): budget is number => budget !== null);
+    const averageBudget = budgets.length
+      ? Math.round(budgets.reduce((acc, value) => acc + value, 0) / budgets.length)
       : 0;
 
     return {
@@ -182,6 +255,7 @@ export const PetitionDetailPage = () => {
       winner,
       winnerName: winner?.providerName ?? null,
       averageBudget,
+      budgetsWithValue: budgets.length,
     };
   }, [postulations]);
 
@@ -366,7 +440,9 @@ export const PetitionDetailPage = () => {
                     </article>
                     <article className="rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-900/40 dark:bg-brand-900/20">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Promedio ofertas</p>
-                      <p className="mt-2 text-2xl font-black text-brand-800 dark:text-brand-200">${customerMetrics.averageBudget}</p>
+                      <p className="mt-2 text-2xl font-black text-brand-800 dark:text-brand-200">
+                        {customerMetrics.budgetsWithValue > 0 ? `$${customerMetrics.averageBudget}` : 'Sin monto'}
+                      </p>
                     </article>
                     <article className="rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900/40 dark:bg-green-900/20">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">Proveedor elegido</p>
@@ -407,11 +483,18 @@ export const PetitionDetailPage = () => {
                                 <span className="rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">Ganador</span>
                               )}
                             </div>
-                            <p className="line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{post.description}</p>
+                            <p className="line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+                              {resolvePostulationDescription(post)}
+                            </p>
                             <div className="flex flex-wrap gap-2 text-[11px]">
-                              {post.budget !== undefined && (
-                                <span className="rounded-md bg-slate-100 px-2 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">Presupuesto: ${post.budget}</span>
-                              )}
+                              {(() => {
+                                const resolvedBudget = resolvePostulationBudget(post);
+                                return (
+                                  <span className="rounded-md bg-slate-100 px-2 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                    Presupuesto: {resolvedBudget !== null ? `$${resolvedBudget}` : 'No informado'}
+                                  </span>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
