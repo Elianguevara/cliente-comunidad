@@ -58,6 +58,14 @@ export const ChatRoomPage = () => {
         // Cargar mensajes
         const msgs = await chatService.getMessages(currentConvId);
         setMessages(msgs);
+
+        // NUEVO: Le avisamos al backend que ya leímos los mensajes al entrar a la sala
+        try {
+          await chatService.markAsRead(currentConvId);
+        } catch (error) {
+          console.error('Error al marcar los mensajes como leídos:', error);
+        }
+
       } catch (error) {
         console.error('Error inicializando el chat:', error);
       } finally {
@@ -72,9 +80,20 @@ export const ChatRoomPage = () => {
       if (id || conversation?.idConversation) {
         const convId = Number(id) || conversation?.idConversation;
         if (convId) {
-          const msgs = await chatService.getMessages(convId);
-          // Solo actualizamos si hay nuevos mensajes para evitar parpadeos
-          setMessages(prev => msgs.length > prev.length ? msgs : prev);
+          try {
+            const msgs = await chatService.getMessages(convId);
+            // Solo actualizamos si hay nuevos mensajes para evitar parpadeos
+            setMessages(prev => {
+              if (msgs.length > prev.length) {
+                // NUEVO: Si llegan mensajes nuevos mientras estamos en el chat, los marcamos como leídos
+                chatService.markAsRead(convId).catch(err => console.error("Error marcando como leído en polling", err));
+                return msgs;
+              }
+              return prev;
+            });
+          } catch (error) {
+             console.error('Error en polling de mensajes', error);
+          }
         }
       }
     }, 5000); // Polling cada 5 segundos

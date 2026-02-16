@@ -29,5 +29,10 @@ export const chatService = {
       content
     });
     return data;
+  },
+
+  // Marca los mensajes de una conversación como leídos
+  markAsRead: async (conversationId: number): Promise<void> => {
+    await axiosClient.put(`/v1/chat/conversations/${conversationId}/read`);
   }
 };
