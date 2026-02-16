@@ -20,8 +20,9 @@ export interface ConversationResponse {
   otherParticipantId: number;
   otherParticipantName: string;
   otherParticipantRole: string;
-  otherParticipantImage?: string;
-  lastMessage?: string;
+  otherParticipantImage: string | null;
+  lastMessage: string;
   updatedAt: string;
   unreadCount: number;
+  isReadOnly: boolean; // <-- AGREGA ESTO
 }

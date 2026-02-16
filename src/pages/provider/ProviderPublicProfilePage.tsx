@@ -1,8 +1,11 @@
-// src/pages/provider/ProviderPublicProfilePage.tsx
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 import { providerService } from '../../services/provider.service';
+import { chatService } from '../../services/chat.service';
+import { petitionService } from '../../services/petition.service';
+// IMPORTAMOS EL COMPONENTE DE RESEÑAS
+import { ProviderReviewsList } from '../../components/reviews/ProviderReviewsList';
 import type { ProviderPublicProfile } from '../../types/provider.types';
 
 export const ProviderPublicProfilePage = () => {
@@ -12,6 +15,13 @@ export const ProviderPublicProfilePage = () => {
   const [profile, setProfile] = useState<ProviderPublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Estados para el Modal de Contacto
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [myPetitions, setMyPetitions] = useState<any[]>([]);
+  const [loadingPetitions, setLoadingPetitions] = useState(false);
+  const [selectedPetitionId, setSelectedPetitionId] = useState<number | ''>('');
+  const [startingChat, setStartingChat] = useState(false);
 
   const loadProfile = useCallback(async (providerId: number) => {
     try {
@@ -32,6 +42,36 @@ export const ProviderPublicProfilePage = () => {
       loadProfile(Number(id));
     }
   }, [id, loadProfile]);
+
+  // Maneja el clic en "Contactar"
+  const handleOpenContactModal = async () => {
+    setShowContactModal(true);
+    setLoadingPetitions(true);
+    try {
+      const response = await petitionService.getMyPetitions(0, 50);
+      const petitionsList = response.content ? response.content : (Array.isArray(response) ? response : []);
+      setMyPetitions(petitionsList);
+    } catch (error) {
+      console.error("Error al cargar peticiones del cliente", error);
+    } finally {
+      setLoadingPetitions(false);
+    }
+  };
+
+  // Crea el chat y redirige
+  const handleStartChat = async () => {
+    if (!selectedPetitionId || !id) return;
+    setStartingChat(true);
+    try {
+      const conv = await chatService.getOrCreateConversation(Number(selectedPetitionId), Number(id));
+      navigate(`/chat/${conv.idConversation}`);
+    } catch (error) {
+      console.error("Error iniciando el chat", error);
+      alert("Hubo un error al intentar crear la conversación.");
+    } finally {
+      setStartingChat(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -133,8 +173,11 @@ export const ProviderPublicProfilePage = () => {
               </div>
             </div>
 
-            {/* BOTÓN CONTACTAR */}
-            <button className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl shadow-md hover:bg-slate-800 transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 flex items-center justify-center gap-2">
+            {/* BOTÓN CONTACTAR MODIFICADO */}
+            <button 
+              onClick={handleOpenContactModal}
+              className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl shadow-md hover:bg-slate-800 transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 flex items-center justify-center gap-2"
+            >
               💬 Enviar Mensaje Directo
             </button>
           </aside>
@@ -148,17 +191,80 @@ export const ProviderPublicProfilePage = () => {
               </p>
             </div>
 
-            {/* SECCIÓN RESEÑAS */}
+            {/* SECCIÓN RESEÑAS - AHORA MUESTRA EL COMPONENTE REAL */}
             <div className="panel p-6 bg-white shadow-sm rounded-2xl dark:bg-slate-800 dark:border-slate-700">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Últimas Reseñas</h3>
-              <div className="text-center p-6 text-sm text-slate-500 italic">
-                La lista detallada de reseñas se cargará aquí.
-              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5">Últimas Reseñas</h3>
+              {id ? (
+                <ProviderReviewsList providerId={Number(id)} refreshTrigger={0} />              ) : (
+                <p className="text-sm text-slate-500">No se pudieron cargar las reseñas.</p>
+              )}
             </div>
           </div>
 
         </div>
       </main>
+
+      {/* MODAL PARA SELECCIONAR PETICIÓN */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Contactar Proveedor</h2>
+              <button onClick={() => setShowContactModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                Para enviar un mensaje a <strong>{profile.name}</strong>, por favor selecciona sobre qué solicitud de trabajo quieres hablar:
+              </p>
+
+              {loadingPetitions ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+                </div>
+              ) : myPetitions.length === 0 ? (
+                <div className="text-center p-4 bg-yellow-50 text-yellow-700 rounded-xl border border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
+                  <p className="text-sm font-medium">No tienes solicitudes activas.</p>
+                  <p className="text-xs mt-1">Debes crear una Petición de Trabajo primero para poder contactar proveedores.</p>
+                  <button onClick={() => navigate('/create-petition')} className="mt-3 text-brand-600 text-sm font-bold underline">
+                    Crear mi primera solicitud
+                  </button>
+                </div>
+              ) : (
+                <select 
+                  value={selectedPetitionId}
+                  onChange={(e) => setSelectedPetitionId(Number(e.target.value))}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                >
+                  <option value="" disabled>-- Selecciona una de tus peticiones --</option>
+                  {myPetitions.map(pet => (
+                    <option key={pet.idPetition} value={pet.idPetition}>
+                      {pet.description.substring(0, 50)}...
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+              <button 
+                onClick={() => setShowContactModal(false)} 
+                className="flex-1 py-2.5 rounded-xl font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleStartChat}
+                disabled={!selectedPetitionId || startingChat}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-50 transition"
+              >
+                {startingChat ? 'Iniciando...' : 'Ir al Chat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 import { petitionService } from '../../services/petition.service';
 import { postulationService } from '../../services/postulation.service';
+import { chatService } from '../../services/chat.service'; // NUEVO: Importamos el servicio de chat
 import type { PetitionResponse } from '../../types/petition.types';
 import type { PostulationResponse } from '../../types/postulation.types';
 import { format, formatDistanceToNow, isAfter, startOfDay } from 'date-fns';
@@ -39,7 +40,6 @@ const parseBudgetValue = (value: unknown): number | null => {
     let normalized = sanitized;
 
     if (hasDot && hasComma) {
-      // Toma como decimal el separador que aparece mas a la derecha.
       const lastDot = sanitized.lastIndexOf('.');
       const lastComma = sanitized.lastIndexOf(',');
       if (lastDot > lastComma) {
@@ -70,7 +70,6 @@ const resolvePostulationBudget = (postulation: PostulationResponse): number | nu
   const directBudget = parseBudgetValue(postulation.budget);
   if (directBudget !== null) return directBudget;
 
-  // Fallback: algunos endpoints devuelven el monto dentro de otros campos de texto.
   const maybePostulation = postulation as PostulationResponse & {
     proposal?: string;
     offer?: string;
@@ -85,7 +84,6 @@ const resolvePostulationBudget = (postulation: PostulationResponse): number | nu
 
 const resolvePostulationDescription = (postulation: PostulationResponse): string => {
   const rawDescription = postulation.description ?? '';
-  // Algunos responses concatenan "Presupuesto: $X" al final del detalle.
   return rawDescription
     .replace(/\s*(?:[-|,]?\s*)?(?:presupuesto|monto|total)\s*[:\-]?\s*\$?\s*[\d.,]+\s*$/i, '')
     .trim();
@@ -116,10 +114,12 @@ export const PetitionDetailPage = () => {
   const [showApplyForm, setShowApplyForm] = useState(false);
   const [alreadyApplied, setAlreadyApplied] = useState(false);
 
+  // NUEVO: Estado para saber qué chat estamos creando (guardamos el ID del proveedor temporalmente)
+  const [startingChatId, setStartingChatId] = useState<number | null>(null);
+
   // Estados para controlar el formulario de calificación
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [hasRated, setHasRated] = useState(false);
-  // Nuevo estado para guardar la reseña que se acaba de enviar en memoria
   const [submittedReview, setSubmittedReview] = useState<{rating: number, comment: string} | null>(null);
 
   const [offer, setOffer] = useState({ description: '', budget: '' });
@@ -143,7 +143,6 @@ export const PetitionDetailPage = () => {
         setPostulations(postulationsData);
         setAlreadyApplied(hasApplied);
 
-        // NUEVO BLOQUE: Verificamos si el cliente ya calificó al proveedor ganador
         if (role === 'CUSTOMER' && petitionData.stateName === 'FINALIZADA') {
           const winner = postulationsData.find((p) => p.isWinner);
           if (winner?.providerId) {
@@ -338,6 +337,21 @@ export const PetitionDetailPage = () => {
     }
   };
 
+  // NUEVO: Función segura para crear y redirigir al chat
+  const handleStartChat = async (providerId: number) => {
+    if (!petition) return;
+    setStartingChatId(providerId); // Bloquea el botón específico de este proveedor
+    try {
+      const conv = await chatService.getOrCreateConversation(petition.idPetition, providerId);
+      navigate(`/chat/${conv.idConversation}`);
+    } catch (error) {
+      console.error("Error iniciando el chat", error);
+      alert("Hubo un error al intentar crear la conversación.");
+    } finally {
+      setStartingChatId(null);
+    }
+  };
+
   if (loading) return <div className="app-shell"><Navbar /><main className="mx-auto max-w-5xl px-4 py-8 text-center text-slate-500">Cargando...</main></div>;
   if (!petition) return null;
 
@@ -529,10 +543,23 @@ export const PetitionDetailPage = () => {
                         {/* Botones de Acción */}
                         <div className="flex flex-col gap-2 sm:min-w-[140px] mt-4 sm:mt-0 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100 dark:border-slate-800 justify-center">
                           {post.isWinner ? (
-                            <span className="text-center rounded-lg bg-green-50 px-3 py-2 text-xs font-bold text-green-700 dark:bg-green-900/20 dark:text-green-300">
-                              Proveedor Seleccionado
-                            </span>
+                            <>
+                              <span className="text-center rounded-lg bg-green-50 px-3 py-2 text-xs font-bold text-green-700 dark:bg-green-900/20 dark:text-green-300">
+                                Proveedor Seleccionado
+                              </span>
+                              {/* El chat con el ganador sigue habilitado hasta que se finaliza o cancela el trabajo */}
+                              {!isFinalizada && !isCancelada && (
+                                <button 
+                                  onClick={() => handleStartChat(post.providerId)}
+                                  disabled={startingChatId === post.providerId}
+                                  className="w-full rounded-lg bg-white border border-brand-300 px-4 py-2 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 shadow-sm dark:bg-slate-800 dark:border-brand-700/50 dark:text-brand-300 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {startingChatId === post.providerId ? 'Iniciando...' : '💬 Abrir Chat'}
+                                </button>
+                              )}
+                            </>
                           ) : (
+                            // Si NO es ganador, desaparecen los botones apenas se adjudica, finaliza o cancela.
                             !isAdjudicada && !isFinalizada && !isCancelada && (
                               <>
                                 <button 
@@ -544,10 +571,11 @@ export const PetitionDetailPage = () => {
                                 </button>
                                 
                                 <button 
-                                  onClick={() => navigate(`/chat/new?petitionId=${petition.idPetition}&providerId=${post.providerId}`)}
-                                  className="w-full rounded-lg bg-white border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 shadow-sm dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                                  onClick={() => handleStartChat(post.providerId)}
+                                  disabled={startingChatId === post.providerId}
+                                  className="w-full rounded-lg bg-white border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 shadow-sm dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  💬 Contactar
+                                  {startingChatId === post.providerId ? 'Iniciando...' : '💬 Contactar'}
                                 </button>
                               </>
                             )

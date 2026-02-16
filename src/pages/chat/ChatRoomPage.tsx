@@ -49,17 +49,24 @@ export const ChatRoomPage = () => {
             return;
           }
         } else {
-          // Si ya teníamos el ID, idealmente buscaríamos los detalles de la conversación
-          // Aquí asumimos que tienes un endpoint para obtener los detalles de 1 conversación
-          // const conv = await chatService.getConversationById(currentConvId);
-          // setConversation(conv);
+          // Buscamos la conversación entre los chats del usuario
+          const userConversations = await chatService.getMyConversations();
+          const currentConversation = userConversations.find(c => c.idConversation === currentConvId);
+          
+          if (currentConversation) {
+            setConversation(currentConversation);
+          } else {
+            // Si el ID no existe o no pertenece al usuario, lo devolvemos al inbox
+            navigate('/chat/inbox');
+            return;
+          }
         }
 
         // Cargar mensajes
         const msgs = await chatService.getMessages(currentConvId);
         setMessages(msgs);
 
-        // NUEVO: Le avisamos al backend que ya leímos los mensajes al entrar a la sala
+        // Le avisamos al backend que ya leímos los mensajes al entrar a la sala
         try {
           await chatService.markAsRead(currentConvId);
         } catch (error) {
@@ -75,17 +82,15 @@ export const ChatRoomPage = () => {
 
     void initChat();
 
-    // 💡 NOTA PARA POLLING TEMPORAL (Hasta implementar WebSockets)
+    // Polling temporal
     const interval = setInterval(async () => {
       if (id || conversation?.idConversation) {
         const convId = Number(id) || conversation?.idConversation;
         if (convId) {
           try {
             const msgs = await chatService.getMessages(convId);
-            // Solo actualizamos si hay nuevos mensajes para evitar parpadeos
             setMessages(prev => {
               if (msgs.length > prev.length) {
-                // NUEVO: Si llegan mensajes nuevos mientras estamos en el chat, los marcamos como leídos
                 chatService.markAsRead(convId).catch(err => console.error("Error marcando como leído en polling", err));
                 return msgs;
               }
@@ -96,7 +101,7 @@ export const ChatRoomPage = () => {
           }
         }
       }
-    }, 5000); // Polling cada 5 segundos
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [id, searchParams, conversation?.idConversation, navigate]);
@@ -163,30 +168,42 @@ export const ChatRoomPage = () => {
           )}
         </div>
 
-        {/* Input de Mensaje */}
+        {/* Input de Mensaje o Mensaje de Bloqueo */}
         <footer className="rounded-b-2xl border border-t-0 border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-800">
-          <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-            <textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(e);
-                }
-              }}
-              placeholder="Escribe un mensaje..."
-              className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 outline-none transition focus:border-brand-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-              rows={1}
-            />
-            <button
-              type="submit"
-              disabled={!newMessage.trim()}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white transition hover:bg-brand-700 disabled:opacity-50"
-            >
-              ➤
-            </button>
-          </form>
+          {conversation?.isReadOnly ? (
+            <div className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-2xl mb-2">🔒</span>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 text-center">
+                Esta conversación ha sido cerrada.
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-1">
+                La solicitud de trabajo finalizó, se canceló o fue adjudicada a otro proveedor.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+              <textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage(e);
+                  }
+                }}
+                placeholder="Escribe un mensaje..."
+                className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 outline-none transition focus:border-brand-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                rows={1}
+              />
+              <button
+                type="submit"
+                disabled={!newMessage.trim()}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white transition hover:bg-brand-700 disabled:opacity-50"
+              >
+                ➤
+              </button>
+            </form>
+          )}
         </footer>
       </main>
     </div>
