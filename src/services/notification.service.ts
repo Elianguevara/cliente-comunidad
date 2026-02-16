@@ -19,5 +19,10 @@ export const notificationService = {
   // 3. Marcar una notificación como leída
   markAsRead: async (idNotification: number): Promise<void> => {
     await client.put(`/notifications/${idNotification}/read`);
+  },
+
+  // 4. Marcar todas las notificaciones como leídas
+  markAllAsRead: async (): Promise<void> => {
+    await client.put('/notifications/read-all');
   }
 };

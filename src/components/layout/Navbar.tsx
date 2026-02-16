@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
-import { userService } from '../../services/user.service'; // <-- Importamos el servicio
+import { userService } from '../../services/user.service';
 import { NotificationBell } from './NotificationBell';
 
 type Role = 'CUSTOMER' | 'PROVIDER' | null;
@@ -11,14 +11,14 @@ export const Navbar = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // --- NUEVO: Estado para la foto de perfil (intentamos leer del caché primero) ---
+  // Estado para la foto de perfil (intentamos leer del caché primero)
   const [profileImage, setProfileImage] = useState<string | null>(localStorage.getItem('profileImage'));
 
   const userName = localStorage.getItem('userName') || 'Usuario';
   const userEmail = localStorage.getItem('userEmail') || 'usuario@email.com';
   const userRole = (localStorage.getItem('role') as Role) ?? null;
 
-  // --- NUEVO: Buscamos la foto real al cargar la barra de navegación ---
+  // Buscamos la foto real al cargar la barra de navegación
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -40,6 +40,7 @@ export const Navbar = () => {
     ? profileImage 
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=0f172a&color=fff`;
 
+  // --- MODIFICADO: Agregamos "Mis Solicitudes" para el rol CUSTOMER ---
   const navLinks = useMemo(() => {
     if (userRole === 'PROVIDER') {
       return [
@@ -50,6 +51,7 @@ export const Navbar = () => {
 
     return [
       { to: '/client-home', label: 'Mi Panel' },
+      { to: '/my-petitions', label: 'Mis Solicitudes' }, // <--- NUEVO ENLACE
       { to: '/create-petition', label: 'Publicar' },
     ];
   }, [userRole]);

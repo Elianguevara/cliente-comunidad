@@ -9,10 +9,14 @@ import { CreatePetitionPage } from '../pages/feed/CreatePetitionPage';
 import { ClientHomePage } from '../pages/client/ClientHomePage';
 import { PetitionDetailPage } from '../pages/feed/PetitionDetailPage';
 import { MyPostulationsPage, ProviderPublicProfilePage } from '../pages/provider';
+import { MyPetitionsPage } from '../pages/client/MyPetitionsPage';
 
-// --- NUEVAS IMPORTACIONES DEL CHAT ---
+// Importaciones de Chat
 import { ChatRoomPage } from '../pages/chat/ChatRoomPage';
- import { ChatInboxPage } from '../pages/chat/ChatInboxPage'; 
+import { ChatInboxPage } from '../pages/chat/ChatInboxPage'; 
+
+// ---> NUEVA IMPORTACIÓN: Página de Notificaciones <---
+import { NotificationsPage } from '../pages/profile/NotificationsPage';
 
 // Importación de Guardias
 import { ProtectedRoute } from './ProtectedRoute';
@@ -61,8 +65,11 @@ export const AppRouter = () => {
           <Route path="/petition/:id" element={<PetitionDetailPage />} />
           <Route path="/provider/:id" element={<ProviderPublicProfilePage />} />
           
-          {/* ---> NUEVAS RUTAS DE CHAT <--- */}
-          { <Route path="/chat/inbox" element={<ChatInboxPage />} /> }
+          {/* ---> NUEVA RUTA DE NOTIFICACIONES <--- */}
+          <Route path="/notifications" element={<NotificationsPage />} />
+          
+          {/* Rutas de Chat */}
+          <Route path="/chat/inbox" element={<ChatInboxPage />} />
           <Route path="/chat/new" element={<ChatRoomPage />} />
           <Route path="/chat/:id" element={<ChatRoomPage />} />
           
@@ -76,6 +83,7 @@ export const AppRouter = () => {
           <Route element={<RequireCustomer />}>
             <Route path="/client-home" element={<ClientHomePage />} />
             <Route path="/create-petition" element={<CreatePetitionPage />} />
+            <Route path="/my-petitions" element={<MyPetitionsPage />} />
           </Route>
           
         </Route>
