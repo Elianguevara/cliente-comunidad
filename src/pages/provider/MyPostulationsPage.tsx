@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
+import { RateCustomerForm } from '../../components/reviews/RateCustomerForm';
+import { getCustomerRatingStatus, type CustomerRatingStatus } from '../../services/grade.service';
 import { postulationService } from '../../services/postulation.service';
 import type { PostulationResponse } from '../../types/postulation.types';
 import { format } from 'date-fns';
@@ -8,6 +10,9 @@ import { es } from 'date-fns/locale';
 
 export const MyPostulationsPage = () => {
   const [postulations, setPostulations] = useState<PostulationResponse[]>([]);
+  const [customerRatingStatusByPetition, setCustomerRatingStatusByPetition] = useState<Record<number, CustomerRatingStatus>>({});
+  const [showRatingFormByPetition, setShowRatingFormByPetition] = useState<Record<number, boolean>>({});
+  const [submittedReviewByPetition, setSubmittedReviewByPetition] = useState<Record<number, { rating: number; comment: string }>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,7 +28,30 @@ export const MyPostulationsPage = () => {
       setLoading(true);
       setError('');
       const data = await postulationService.getMyPostulations();
-      setPostulations(data.content || []); // .content por la paginación de Spring
+      const currentPostulations = data.content || [];
+      setPostulations(currentPostulations); // .content por la paginación de Spring
+
+      const winnerPetitionIds = [...new Set(currentPostulations.filter((p) => p.isWinner).map((p) => p.petitionId))];
+      if (winnerPetitionIds.length === 0) {
+        setCustomerRatingStatusByPetition({});
+        return;
+      }
+
+      const statusResults = await Promise.allSettled(
+        winnerPetitionIds.map((petitionId) => getCustomerRatingStatus(petitionId))
+      );
+
+      const nextStatusByPetition: Record<number, CustomerRatingStatus> = {};
+      statusResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const status = result.value;
+          if (status && (status.canRate || status.hasRated)) {
+            nextStatusByPetition[winnerPetitionIds[index]] = status;
+          }
+        }
+      });
+
+      setCustomerRatingStatusByPetition(nextStatusByPetition);
     } catch (error) {
       console.error('Error cargando postulaciones:', error);
       setError('No pudimos cargar tus postulaciones. Intenta nuevamente.');
@@ -177,13 +205,18 @@ export const MyPostulationsPage = () => {
           </div>
         ) : (
           <div className="grid gap-4">
-            {filteredPostulations.map((p) => (
-              <div 
-                key={p.idPostulation} 
-                className={`panel p-6 transition-all hover:-translate-y-0.5 hover:shadow-md flex flex-col gap-4 md:flex-row md:items-center md:justify-between
-                ${p.isWinner ? 'border-green-400 ring-1 ring-green-400 dark:border-green-700 dark:ring-green-700' : ''}`}
-              >
-                <div className="flex-1">
+            {filteredPostulations.map((p) => {
+              const ratingStatus = customerRatingStatusByPetition[p.petitionId];
+              const showRatingForm = showRatingFormByPetition[p.petitionId] ?? false;
+              const submittedReview = submittedReviewByPetition[p.petitionId];
+
+              return (
+                <div 
+                  key={p.idPostulation} 
+                  className={`panel p-6 transition-all hover:-translate-y-0.5 hover:shadow-md flex flex-col gap-4 md:flex-row md:items-center md:justify-between
+                  ${p.isWinner ? 'border-green-400 ring-1 ring-green-400 dark:border-green-700 dark:ring-green-700' : ''}`}
+                >
+                  <div className="flex-1">
                   <div className="mb-2 flex flex-wrap items-center gap-3">
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">{p.petitionTitle}</h3>
                     {getStatusBadge(p.stateName)}
@@ -206,23 +239,104 @@ export const MyPostulationsPage = () => {
                       </span>
                     )}
                   </div>
-                </div>
+                  
+                  {p.isWinner && ratingStatus && (ratingStatus.canRate || ratingStatus.hasRated) && (
+                    <div className="mt-4">
+                      {ratingStatus.canRate && !showRatingForm && (
+                        <button
+                          onClick={() =>
+                            setShowRatingFormByPetition((prev) => ({ ...prev, [p.petitionId]: true }))
+                          }
+                          className="w-full rounded-xl bg-blue-600 py-3 font-bold text-white shadow-lg transition hover:bg-blue-700 active:scale-95 md:w-auto md:px-5"
+                        >
+                          ⭐ Calificar al cliente
+                        </button>
+                      )}
 
-                <div className="flex w-full gap-2 md:w-auto">
-                  <button 
-                    onClick={() => navigate(`/petition/${p.petitionId}`)}
-                    className="flex-1 rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 md:flex-none"
-                  >
-                    Ver Trabajo
-                  </button>
-                  {p.isWinner && (
-                    <button className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700 md:flex-none">
-                      Contactar Cliente
-                    </button>
+                      {ratingStatus.canRate && showRatingForm && (
+                        <div className="panel mt-4 border-2 border-brand-200 p-5">
+                          <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-sm font-bold text-slate-800 dark:text-white">Dejar reseña al cliente</h3>
+                            <button
+                              onClick={() =>
+                                setShowRatingFormByPetition((prev) => ({ ...prev, [p.petitionId]: false }))
+                              }
+                              className="text-xs text-slate-500 hover:text-slate-700"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                          <RateCustomerForm
+                            customerId={ratingStatus.customerId}
+                            petitionId={p.petitionId}
+                            onSuccess={(r, c) => {
+                              setCustomerRatingStatusByPetition((prev) => ({
+                                ...prev,
+                                [p.petitionId]: { ...ratingStatus, canRate: false, hasRated: true },
+                              }));
+                              setSubmittedReviewByPetition((prev) => ({
+                                ...prev,
+                                [p.petitionId]: { rating: r, comment: c },
+                              }));
+                              setShowRatingFormByPetition((prev) => ({ ...prev, [p.petitionId]: false }));
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {ratingStatus.hasRated && (
+                        <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm dark:border-green-900/50 dark:bg-green-900/20">
+                          <div className="mb-2 flex items-start justify-between">
+                            <h3 className="text-sm font-bold text-green-800 dark:text-green-300">
+                              {submittedReview
+                                ? `Tu calificación para ${ratingStatus.customerName}`
+                                : `Ya calificaste a ${ratingStatus.customerName}`}
+                            </h3>
+                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-900/50 dark:text-green-400">
+                              ✓ Completado
+                            </span>
+                          </div>
+                          {submittedReview ? (
+                            <>
+                              <div className="mb-2 flex text-lg text-yellow-400 drop-shadow-sm">
+                                {'★'.repeat(submittedReview.rating)}
+                                <span className="text-gray-300 dark:text-slate-600">
+                                  {'★'.repeat(5 - submittedReview.rating)}
+                                </span>
+                              </div>
+                              {submittedReview.comment ? (
+                                <p className="text-sm italic text-green-700 dark:text-green-400">"{submittedReview.comment}"</p>
+                              ) : (
+                                <p className="text-xs italic text-green-600/70 dark:text-green-400/70">Sin comentario escrito.</p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="mt-2 text-xs text-green-700">
+                              Tu reseña ya se encuentra registrada en el perfil del cliente.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+
+                  <div className="flex w-full flex-col gap-2 md:w-auto md:items-end">
+                    <button 
+                      onClick={() => navigate(`/petition/${p.petitionId}`)}
+                      className="w-full rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 md:w-auto"
+                    >
+                      Ver Trabajo
+                    </button>
+                    {p.isWinner && (
+                      <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-center text-xs font-semibold text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300">
+                        El cliente iniciará la conversación.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </main>

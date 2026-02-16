@@ -11,7 +11,8 @@ import { es } from 'date-fns/locale';
 
 // Importamos el componente de calificaciones y la nueva validación
 import { RateProviderForm } from '../../components/reviews/RateProviderForm';
-import { checkIfProviderRated } from '../../services/grade.service';
+import { RateCustomerForm } from '../../components/reviews/RateCustomerForm';
+import { checkIfProviderRated, getCustomerRatingStatus } from '../../services/grade.service';
 
 interface ApiErrorPayload {
   message?: string;
@@ -119,6 +120,8 @@ export const PetitionDetailPage = () => {
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [hasRated, setHasRated] = useState(false);
   const [submittedReview, setSubmittedReview] = useState<{rating: number, comment: string} | null>(null);
+  // Nuevo estado para que el proveedor sepa si puede evaluar al cliente
+  const [customerRatingStatus, setCustomerRatingStatus] = useState<{ canRate: boolean; hasRated: boolean; customerId: number; customerName: string } | null>(null);
 
   const [offer, setOffer] = useState({ description: '', budget: '' });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -146,6 +149,17 @@ export const PetitionDetailPage = () => {
           if (winner?.providerId) {
             const yaCalifico = await checkIfProviderRated(winner.providerId, petitionData.idPetition);
             setHasRated(yaCalifico);
+          }
+        }
+
+        // --- NUEVO: Si es proveedor y está finalizada, averiguamos si puede calificar al cliente
+        if (role === 'PROVIDER' && petitionData.stateName === 'FINALIZADA') {
+          const ratingStatus = await getCustomerRatingStatus(idPetition);
+          if (ratingStatus) {
+            setCustomerRatingStatus(ratingStatus);
+            if (ratingStatus.hasRated) {
+              setHasRated(true); // Reusamos este estado visual
+            }
           }
         }
 
@@ -641,6 +655,71 @@ export const PetitionDetailPage = () => {
                 <p className={`text-sm font-bold ${providerStatusMessage.tone === 'success' ? 'text-green-700' : providerStatusMessage.tone === 'warning' ? 'text-amber-800' : 'text-slate-700'}`}>{providerStatusMessage.title}</p>
                 <p className={`mt-1 text-xs ${providerStatusMessage.tone === 'success' ? 'text-green-600' : providerStatusMessage.tone === 'warning' ? 'text-amber-700' : 'text-slate-500'}`}>{providerStatusMessage.description}</p>
               </section>
+            )}
+
+            {/* --- NUEVO: SECCIÓN DE CALIFICACIÓN PARA EL PROVEEDOR --- */}
+            {role === 'PROVIDER' && customerRatingStatus && (customerRatingStatus.canRate || customerRatingStatus.hasRated) && (
+              <div className="mt-4">
+                {customerRatingStatus.canRate && !showRatingForm && (
+                  <button 
+                    onClick={() => setShowRatingForm(true)} 
+                    className="w-full rounded-xl bg-blue-600 py-3 font-bold text-white shadow-lg transition hover:bg-blue-700 active:scale-95 mb-4"
+                  >
+                    ⭐ Calificar al cliente
+                  </button>
+                )}
+                
+                {customerRatingStatus.canRate && showRatingForm && (
+                  <div className="panel p-5 border-2 border-brand-200 mt-4 mb-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-sm font-bold text-slate-800 dark:text-white">Dejar reseña al cliente</h3>
+                      <button onClick={() => setShowRatingForm(false)} className="text-xs text-slate-500 hover:text-slate-700">Cancelar</button>
+                    </div>
+                    <RateCustomerForm
+                        customerId={customerRatingStatus.customerId}
+                        petitionId={petition.idPetition}
+                        onSuccess={(r, c) => {
+                            setCustomerRatingStatus(prev => prev ? {...prev, canRate: false, hasRated: true} : null);
+                            setHasRated(true);
+                            setSubmittedReview({ rating: r, comment: c });
+                            setShowRatingForm(false);
+                        }}
+                    />
+                  </div>
+                )}
+                
+                {customerRatingStatus.hasRated && (
+                  <div className="mt-4 mb-4 rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm dark:border-green-900/50 dark:bg-green-900/20">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-sm font-bold text-green-800 dark:text-green-300">
+                        {submittedReview ? `Tu calificación para ${customerRatingStatus.customerName}` : `Ya calificaste a ${customerRatingStatus.customerName}`}
+                      </h3>
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-900/50 dark:text-green-400">
+                        ✓ Completado
+                      </span>
+                    </div>
+                    {submittedReview ? (
+                      <>
+                        <div className="flex text-yellow-400 text-lg mb-2 drop-shadow-sm">
+                          {'★'.repeat(submittedReview.rating)}
+                          <span className="text-gray-300 dark:text-slate-600">
+                            {'★'.repeat(5 - submittedReview.rating)}
+                          </span>
+                        </div>
+                        {submittedReview.comment ? (
+                          <p className="text-sm text-green-700 dark:text-green-400 italic">"{submittedReview.comment}"</p>
+                        ) : (
+                          <p className="text-xs text-green-600/70 dark:text-green-400/70 italic">Sin comentario escrito.</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-green-700 mt-2">
+                        Tu reseña ya se encuentra registrada en el perfil del cliente.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* ACCIONES PARA CLIENTE */}
