@@ -7,13 +7,14 @@ import { authService } from '../../services/auth.service';
 import { userService } from '../../services/user.service';
 import type { UpdateProfileData } from '../../services/user.service';
 
-// Importamos el servicio de metadata y provider
 import { metadataService } from '../../services/metadata.service';
 import { providerService } from '../../services/provider.service';
 import type { City, Profession } from '../../types/metadata.types';
-
 import type { UserProfile } from '../../types/user.types';
 import { ProviderReviewsList } from '../../components/reviews/ProviderReviewsList';
+
+// --- NUEVO: Importamos el componente para subir imágenes ---
+import { ImageUploader } from '../../components/media/ImageUploader';
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
@@ -209,7 +210,6 @@ interface EditModalProps {
 }
 
 const EditProfileModal = ({ user, onClose, onSaveSuccess }: EditModalProps) => {
-  // Datos Generales de Usuario
   const [formData, setFormData] = useState<UpdateProfileData>({
     name: user.name,
     lastname: user.lastname,
@@ -218,16 +218,12 @@ const EditProfileModal = ({ user, onClose, onSaveSuccess }: EditModalProps) => {
     profileImage: user.profileImage || '',
   });
 
-  // Datos específicos de Proveedor
   const [idProfession, setIdProfession] = useState<number>(0);
   const [selectedCities, setSelectedCities] = useState<number[]>([]);
-
-  // Opciones desde Backend
   const [professions, setProfessions] = useState<Profession[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // Cargar metadatos
   useEffect(() => {
     if (user.role === 'PROVIDER') {
       const loadMetadata = async () => {
@@ -238,9 +234,6 @@ const EditProfileModal = ({ user, onClose, onSaveSuccess }: EditModalProps) => {
           ]);
           setProfessions(profData);
           setCities(cityData);
-          
-          // NOTA: Como el UserProfile actual no trae los IDs de la profesión o ciudades del proveedor
-          // El usuario tendrá que seleccionarlos. 
         } catch (error) {
           console.error("Error cargando metadatos", error);
         }
@@ -264,10 +257,8 @@ const EditProfileModal = ({ user, onClose, onSaveSuccess }: EditModalProps) => {
     setSaving(true);
     
     try {
-      // 1. Guardar Datos Básicos (Usuario)
       await userService.updateProfile(formData);
 
-      // 2. Si es proveedor, guardar Datos Profesionales
       if (user.role === 'PROVIDER') {
         if (idProfession === 0) {
           alert("Debes seleccionar una profesión principal.");
@@ -277,7 +268,7 @@ const EditProfileModal = ({ user, onClose, onSaveSuccess }: EditModalProps) => {
         
         await providerService.updateProfile({
           idProfession: idProfession,
-          description: formData.description || '', // Enviamos la misma bio
+          description: formData.description || '', 
           cityIds: selectedCities
         });
       }
@@ -300,26 +291,25 @@ const EditProfileModal = ({ user, onClose, onSaveSuccess }: EditModalProps) => {
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-5 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <form onSubmit={handleSubmit} className="p-5 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           
-          <div className="mb-2">
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Foto de Perfil (URL)</label>
-            <div className="flex gap-3 items-center">
-              <input 
-                name="profileImage" 
-                value={formData.profileImage || ''} 
-                onChange={handleChange}
-                placeholder="https://ejemplo.com/foto.jpg"
-                className="flex-1 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+          {/* --- AQUÍ REEMPLAZAMOS EL INPUT DE TEXTO POR EL IMAGE UPLOADER --- */}
+          <div className="flex flex-col items-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+            <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-3 uppercase tracking-wide">
+              Cambiar Foto de Perfil
+            </label>
+            <div className="w-full">
+              <ImageUploader 
+                onUploadSuccess={(url: string) => {
+                  setFormData(prev => ({ ...prev, profileImage: url }));
+                }} 
               />
-              <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0 shadow-sm">
-                {formData.profileImage ? (
-                  <img src={formData.profileImage} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs">?</div>
-                )}
-              </div>
             </div>
+            {formData.profileImage && formData.profileImage !== user.profileImage && (
+              <p className="mt-3 text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-full">
+                ✓ Nueva foto lista para guardar
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -340,7 +330,6 @@ const EditProfileModal = ({ user, onClose, onSaveSuccess }: EditModalProps) => {
             </div>
           )}
 
-          {/* ZONA ESPECÍFICA PROVEEDOR */}
           {user.role === 'PROVIDER' && (
             <>
               <hr className="border-slate-100 dark:border-slate-800" />
@@ -358,9 +347,8 @@ const EditProfileModal = ({ user, onClose, onSaveSuccess }: EditModalProps) => {
                     <option key={prof.idProfession} value={prof.idProfession}>{prof.name}</option>
                   ))}
                 </select>
-                {/* NUEVO: Texto de aclaración para el proveedor */}
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 leading-tight">
-                  💡 <strong className="font-semibold">Nota:</strong> Esta será tu etiqueta principal para atraer clientes, pero <span className="underline decoration-brand-300">podrás postularte a cualquier otro tipo de trabajo</span> (ej. plomería, electricidad) si tienes los conocimientos necesarios. Usa tu Biografía para detallar tus otras habilidades.
+                  💡 <strong className="font-semibold">Nota:</strong> Esta será tu etiqueta principal para atraer clientes, pero <span className="underline decoration-brand-300">podrás postularte a cualquier otro tipo de trabajo</span> si tienes los conocimientos necesarios.
                 </p>
               </div>
 
@@ -384,7 +372,6 @@ const EditProfileModal = ({ user, onClose, onSaveSuccess }: EditModalProps) => {
 
               <div>
                 <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-1 uppercase tracking-wide">Descripción / Biografía</label>
-                {/* NUEVO: Placeholder actualizado */}
                 <textarea 
                   name="description" 
                   value={formData.description} 

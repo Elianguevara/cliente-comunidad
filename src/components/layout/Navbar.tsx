@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
+import { userService } from '../../services/user.service'; // <-- Importamos el servicio
 import { NotificationBell } from './NotificationBell';
 
 type Role = 'CUSTOMER' | 'PROVIDER' | null;
@@ -9,12 +10,35 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // --- NUEVO: Estado para la foto de perfil (intentamos leer del caché primero) ---
+  const [profileImage, setProfileImage] = useState<string | null>(localStorage.getItem('profileImage'));
 
   const userName = localStorage.getItem('userName') || 'Usuario';
   const userEmail = localStorage.getItem('userEmail') || 'usuario@email.com';
   const userRole = (localStorage.getItem('role') as Role) ?? null;
 
-  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=0f172a&color=fff`;
+  // --- NUEVO: Buscamos la foto real al cargar la barra de navegación ---
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const user = await userService.getProfile();
+        if (user.profileImage) {
+          setProfileImage(user.profileImage);
+          localStorage.setItem('profileImage', user.profileImage); // Actualizamos el caché
+        }
+      } catch (error) {
+        console.error('Error cargando la foto en el Navbar', error);
+      }
+    };
+
+    fetchProfileData();
+  }, []);
+
+  // Lógica de la imagen: Si profileImage existe, usa esa url. Si no, usa las iniciales.
+  const avatarUrl = profileImage 
+    ? profileImage 
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=0f172a&color=fff`;
 
   const navLinks = useMemo(() => {
     if (userRole === 'PROVIDER') {
@@ -37,6 +61,7 @@ export const Navbar = () => {
 
   const handleLogout = () => {
     authService.logout();
+    localStorage.removeItem('profileImage'); // Limpiamos la foto al salir
     closeMenus();
     navigate('/login');
   };
@@ -80,7 +105,7 @@ export const Navbar = () => {
 
         <div className="flex items-center gap-2 sm:gap-3">
           
-          {/* ---> NUEVO BOTÓN DE MENSAJES (Bandeja de Entrada) <--- */}
+          {/* Botón de Mensajes */}
           <Link
             to="/chat/inbox"
             onClick={closeMenus}

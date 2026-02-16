@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 import { petitionService } from '../../services/petition.service';
 import { postulationService } from '../../services/postulation.service';
-import { chatService } from '../../services/chat.service'; // NUEVO: Importamos el servicio de chat
+import { chatService } from '../../services/chat.service';
 import type { PetitionResponse } from '../../types/petition.types';
 import type { PostulationResponse } from '../../types/postulation.types';
 import { format, formatDistanceToNow, isAfter, startOfDay } from 'date-fns';
@@ -114,10 +114,8 @@ export const PetitionDetailPage = () => {
   const [showApplyForm, setShowApplyForm] = useState(false);
   const [alreadyApplied, setAlreadyApplied] = useState(false);
 
-  // NUEVO: Estado para saber qué chat estamos creando (guardamos el ID del proveedor temporalmente)
   const [startingChatId, setStartingChatId] = useState<number | null>(null);
 
-  // Estados para controlar el formulario de calificación
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [hasRated, setHasRated] = useState(false);
   const [submittedReview, setSubmittedReview] = useState<{rating: number, comment: string} | null>(null);
@@ -337,10 +335,9 @@ export const PetitionDetailPage = () => {
     }
   };
 
-  // NUEVO: Función segura para crear y redirigir al chat
   const handleStartChat = async (providerId: number) => {
     if (!petition) return;
-    setStartingChatId(providerId); // Bloquea el botón específico de este proveedor
+    setStartingChatId(providerId); 
     try {
       const conv = await chatService.getOrCreateConversation(petition.idPetition, providerId);
       navigate(`/chat/${conv.idConversation}`);
@@ -425,6 +422,21 @@ export const PetitionDetailPage = () => {
               </div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{petition.professionName}</h1>
               <p className="mt-4 text-slate-700 dark:text-slate-300 leading-relaxed">{petition.description}</p>
+              
+              {/* --- AQUÍ RENDERIZAMOS LA FOTO ADJUNTA SI EXISTE --- */}
+              {petition.imageUrl && (
+                <div className="mt-6">
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Foto adjunta:</h3>
+                  <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 max-w-full bg-slate-100 dark:bg-slate-800 flex justify-center">
+                    <img 
+                      src={petition.imageUrl} 
+                      alt="Problema adjunto" 
+                      className="max-h-[400px] w-auto object-contain hover:scale-[1.02] transition-transform duration-300"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="mt-6 flex flex-wrap gap-4 text-sm">
                 <span className="rounded-lg bg-slate-100 px-3 py-2 font-medium">📍 {petition.cityName}</span>
                 <span className={`rounded-lg px-3 py-2 font-medium ${isExpired ? 'bg-red-100 text-red-700' : 'bg-slate-100'}`}>📅 Vence: {format(new Date(petition.dateUntil), 'dd/MM/yyyy')}</span>
@@ -501,7 +513,6 @@ export const PetitionDetailPage = () => {
                                 {post.providerName}
                               </button>
                               
-                              {/* --- UI: Promedio de estrellas del proveedor --- */}
                               {post.providerRating !== undefined && post.providerRating > 0 && (
                                 <span className="flex items-center gap-1 bg-yellow-50 border border-yellow-200 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-700/50 dark:text-yellow-400 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm">
                                   ⭐ {post.providerRating.toFixed(1)}
@@ -516,7 +527,6 @@ export const PetitionDetailPage = () => {
                               )}
                             </div>
                             
-                            {/* Propuesta del proveedor */}
                             <div className="rounded-lg bg-slate-50 p-3 mt-2 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50">
                               <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line">
                                 {resolvePostulationDescription(post)}
@@ -547,7 +557,6 @@ export const PetitionDetailPage = () => {
                               <span className="text-center rounded-lg bg-green-50 px-3 py-2 text-xs font-bold text-green-700 dark:bg-green-900/20 dark:text-green-300">
                                 Proveedor Seleccionado
                               </span>
-                              {/* El chat con el ganador sigue habilitado hasta que se finaliza o cancela el trabajo */}
                               {!isFinalizada && !isCancelada && (
                                 <button 
                                   onClick={() => handleStartChat(post.providerId)}
@@ -559,7 +568,6 @@ export const PetitionDetailPage = () => {
                               )}
                             </>
                           ) : (
-                            // Si NO es ganador, desaparecen los botones apenas se adjudica, finaliza o cancela.
                             !isAdjudicada && !isFinalizada && !isCancelada && (
                               <>
                                 <button 
@@ -707,7 +715,6 @@ export const PetitionDetailPage = () => {
                     
                     {submittedReview ? (
                       <>
-                        {/* Renderizamos las estrellas si está en memoria */}
                         <div className="flex text-yellow-400 text-lg mb-2 drop-shadow-sm">
                           {'★'.repeat(submittedReview.rating)}
                           <span className="text-gray-300 dark:text-slate-600">
@@ -715,7 +722,6 @@ export const PetitionDetailPage = () => {
                           </span>
                         </div>
 
-                        {/* Renderizamos el comentario si existe */}
                         {submittedReview.comment ? (
                           <p className="text-sm text-green-700 dark:text-green-400 italic">
                             "{submittedReview.comment}"

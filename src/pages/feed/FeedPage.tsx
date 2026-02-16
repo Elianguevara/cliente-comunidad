@@ -156,39 +156,64 @@ export const FeedPage = () => {
                 {filteredPetitions.map((petition) => (
                   <article
                     key={petition.idPetition}
-                    className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700"
+                    className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700"
                   >
-                    <div className="mb-4 flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl dark:bg-slate-800">
-                          🛠️
-                        </div>
-                        <div>
-                          <span className="block text-xs font-bold uppercase tracking-wide text-brand-600">{petition.typePetitionName}</span>
-                          <span className="text-xs text-slate-400">
-                            {formatDistanceToNow(new Date(petition.dateSince), { addSuffix: true, locale: es })}
+                    {/* --- NUEVO: SECCIÓN DE LA MINIATURA --- */}
+                    {petition.imageUrl ? (
+                      <div className="relative h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+                        <img 
+                          src={petition.imageUrl} 
+                          alt={`Problema de ${petition.professionName}`}
+                          className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+                        />
+                        {/* Etiqueta flotante de urgencia sobre la imagen */}
+                        <div className="absolute top-3 left-3">
+                          <span className="rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-700 shadow-sm backdrop-blur-sm dark:bg-slate-900/90 dark:text-brand-300">
+                            {petition.typePetitionName}
                           </span>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="flex-1">
-                      <h2 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">{petition.professionName}</h2>
-                      <p className="mb-4 text-sm text-slate-600 dark:text-slate-400 line-clamp-3">{petition.description}</p>
-                    </div>
-
-                    <div className="mt-2 border-t border-slate-100 pt-4 dark:border-slate-800">
-                      <div className="mb-4 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
-                        <span className="truncate">📍 {petition.cityName}</span>
-                        <span className="truncate max-w-[40%] text-right">👤 {petition.customerName}</span>
+                    ) : (
+                      <div className="p-6 pb-0">
+                        {/* Si NO hay imagen, mostramos el encabezado viejo */}
+                        <div className="mb-4 flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl dark:bg-slate-800">
+                              🛠️
+                            </div>
+                            <div>
+                              <span className="block text-xs font-bold uppercase tracking-wide text-brand-600">{petition.typePetitionName}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Contenido de la tarjeta */}
+                    <div className={`flex-1 flex flex-col ${petition.imageUrl ? 'p-5' : 'px-6 pb-6'}`}>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h2 className="text-xl font-bold text-slate-900 dark:text-white line-clamp-1">{petition.professionName}</h2>
+                          <span className="text-[10px] text-slate-400 shrink-0">
+                            {formatDistanceToNow(new Date(petition.dateSince), { addSuffix: true, locale: es })}
+                          </span>
+                        </div>
+                        <p className="mb-4 text-sm text-slate-600 dark:text-slate-400 line-clamp-3">{petition.description}</p>
                       </div>
 
-                      <Link
-                        to={`/petition/${petition.idPetition}`}
-                        className="block w-full rounded-xl bg-slate-100 py-2.5 text-center text-sm font-semibold text-slate-900 transition-colors hover:bg-brand-600 hover:text-white dark:bg-slate-800 dark:text-white"
-                      >
-                        Ver detalles
-                      </Link>
+                      <div className="mt-auto border-t border-slate-100 pt-4 dark:border-slate-800">
+                        <div className="mb-4 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+                          <span className="truncate font-medium">📍 {petition.cityName}</span>
+                          <span className="truncate max-w-[40%] text-right">👤 {petition.customerName}</span>
+                        </div>
+
+                        <Link
+                          to={`/petition/${petition.idPetition}`}
+                          className="block w-full rounded-xl bg-slate-100 py-2.5 text-center text-sm font-semibold text-slate-900 transition-colors hover:bg-brand-600 hover:text-white dark:bg-slate-800 dark:text-white"
+                        >
+                          Ver detalles
+                        </Link>
+                      </div>
                     </div>
                   </article>
                 ))}
