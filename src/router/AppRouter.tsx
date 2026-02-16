@@ -12,7 +12,7 @@ import { MyPostulationsPage, ProviderPublicProfilePage } from '../pages/provider
 
 // --- NUEVAS IMPORTACIONES DEL CHAT ---
 import { ChatRoomPage } from '../pages/chat/ChatRoomPage';
- import { ChatInboxPage } from '../pages/chat/ChatInboxPage'; // Descoméntalo cuando crees la bandeja de entrada
+ import { ChatInboxPage } from '../pages/chat/ChatInboxPage'; 
 
 // Importación de Guardias
 import { ProtectedRoute } from './ProtectedRoute';

@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 import { petitionService } from '../../services/petition.service';
 import { metadataService } from '../../services/metadata.service';
+// Importamos el nuevo componente uploader
+import { ImageUploader } from '../../components/media/ImageUploader'; 
 import type { PetitionRequest } from '../../types/petition.types';
 import type { City, Profession, TypePetition } from '../../types/metadata.types';
 
@@ -33,6 +35,9 @@ export const CreatePetitionPage = () => {
   const [cities, setCities] = useState<City[]>([]);
   const [types, setTypes] = useState<TypePetition[]>([]);
   
+  // --- NUEVO ESTADO PARA LA IMAGEN ---
+  const [imageUrl, setImageUrl] = useState<string>('');
+
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -80,6 +85,9 @@ export const CreatePetitionPage = () => {
         idProfession: Number(data.idProfession),
         idCity: Number(data.idCity),
         idTypePetition: Number(data.idTypePetition),
+        // --- INCLUIMOS LA IMAGEN EN EL PAYLOAD ---
+        // Nota: Asegúrate de que PetitionRequest en frontend y backend admitan este campo
+        ...(imageUrl && { imageUrl }), 
       };
 
       await petitionService.createPetition(payload);
@@ -279,6 +287,27 @@ export const CreatePetitionPage = () => {
                   {errors.idTypePetition.message}
                 </p>
               )}
+            </section>
+
+            {/* --- NUEVA SECCIÓN: 4. ADJUNTAR FOTO --- */}
+            <section>
+              <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Foto del problema (Opcional)
+              </h2>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+                <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
+                  Una imagen ayuda a los profesionales a darte un presupuesto más preciso.
+                </p>
+                <ImageUploader 
+                  onUploadSuccess={(url: string) => setImageUrl(url)}                />
+                
+                {/* Feedback visual si la imagen ya subió */}
+                {imageUrl && (
+                  <p className="mt-2 text-xs font-medium text-green-600 dark:text-green-400">
+                    Imagen adjuntada correctamente a la petición.
+                  </p>
+                )}
+              </div>
             </section>
 
             {/* Botones de Acción */}
