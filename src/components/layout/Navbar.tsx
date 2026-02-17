@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
+import { chatService } from '../../services/chat.service';
 import { userService } from '../../services/user.service';
 import { NotificationBell } from './NotificationBell';
 
@@ -10,6 +11,7 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   
   // Estado para la foto de perfil (intentamos leer del caché primero)
   const [profileImage, setProfileImage] = useState<string | null>(localStorage.getItem('profileImage'));
@@ -33,6 +35,29 @@ export const Navbar = () => {
     };
 
     fetchProfileData();
+  }, []);
+
+  // Cargamos el total de mensajes no leidos para mostrarlo en el icono de mensajes
+  useEffect(() => {
+    const loadUnreadMessages = async () => {
+      try {
+        const conversations = await chatService.getMyConversations();
+        const unreadTotal = conversations.reduce(
+          (total, conversation) => total + (conversation.unreadCount || 0),
+          0
+        );
+        setUnreadMessagesCount(unreadTotal);
+      } catch (error) {
+        console.error('Error cargando mensajes no leidos en el Navbar', error);
+      }
+    };
+
+    void loadUnreadMessages();
+    const interval = setInterval(() => {
+      void loadUnreadMessages();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Lógica de la imagen: Si profileImage existe, usa esa url. Si no, usa las iniciales.
@@ -70,6 +95,7 @@ export const Navbar = () => {
 
   const roleLabel = userRole === 'PROVIDER' ? 'Proveedor' : 'Cliente';
   const homePath = userRole === 'PROVIDER' ? '/feed' : '/client-home';
+  const unreadMessagesLabel = unreadMessagesCount > 99 ? '99+' : unreadMessagesCount.toString();
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
@@ -111,12 +137,17 @@ export const Navbar = () => {
           <Link
             to="/chat/inbox"
             onClick={closeMenus}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             title="Mis Mensajes"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-6 w-6">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
             </svg>
+            {unreadMessagesCount > 0 && (
+              <span className="absolute right-0.5 top-0.5 rounded-full border-2 border-white bg-red-500 px-1.5 text-[10px] font-bold text-white dark:border-slate-900">
+                {unreadMessagesLabel}
+              </span>
+            )}
           </Link>
 
           <NotificationBell />
