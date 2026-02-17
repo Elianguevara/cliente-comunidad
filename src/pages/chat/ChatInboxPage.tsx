@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 import { chatService } from '../../services/chat.service';
+import { getChatSocket } from '../../services/socket.service';
 import type { ConversationResponse } from '../../types/chat.types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -11,28 +12,51 @@ export const ChatInboxPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const loadConversations = async () => {
-      try {
+  const loadConversations = useCallback(async (showLoading = false) => {
+    try {
+      if (showLoading) {
         setLoading(true);
-        const data = await chatService.getMyConversations();
-        
-        // Ordenamos las conversaciones para que las más recientes (actualizadas) salgan primero
-        const sortedData = data.sort((a, b) => 
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
-        
-        setConversations(sortedData);
-      } catch (err) {
-        console.error('Error cargando bandeja de entrada', err);
-        setError('No pudimos cargar tus mensajes. Intenta más tarde.');
-      } finally {
+      }
+      const data = await chatService.getMyConversations();
+
+      // Ordenamos las conversaciones para que las más recientes (actualizadas) salgan primero
+      const sortedData = data.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+
+      setConversations(sortedData);
+      setError('');
+    } catch (err) {
+      console.error('Error cargando bandeja de entrada', err);
+      setError('No pudimos cargar tus mensajes. Intenta más tarde.');
+    } finally {
+      if (showLoading) {
         setLoading(false);
       }
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadConversations(true);
+
+    const interval = setInterval(() => {
+      void loadConversations(false);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [loadConversations]);
+
+  useEffect(() => {
+    const socket = getChatSocket();
+    const handleNewMessage = () => {
+      void loadConversations(false);
     };
 
-    void loadConversations();
-  }, []);
+    socket.on('chat.new-message', handleNewMessage);
+    return () => {
+      socket.off('chat.new-message', handleNewMessage);
+    };
+  }, [loadConversations]);
 
   return (
     <div className="app-shell min-h-screen bg-slate-50 dark:bg-slate-900">

@@ -2,7 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 import { chatService } from '../../services/chat.service';
+import { getChatSocket } from '../../services/socket.service';
 import type { MessageResponse, ConversationResponse } from '../../types/chat.types';
+import type { ChatNewMessageEvent } from '../../types/socket.types';
 import { format } from 'date-fns';
 
 export const ChatRoomPage = () => {
@@ -106,6 +108,34 @@ export const ChatRoomPage = () => {
     return () => clearInterval(interval);
   }, [id, searchParams, conversation?.idConversation, navigate]);
 
+  useEffect(() => {
+    const convId = Number(id) || conversation?.idConversation;
+    if (!convId) return;
+
+    const socket = getChatSocket();
+    const handleNewMessage = ({ conversationId, message }: ChatNewMessageEvent) => {
+      if (conversationId !== convId) return;
+
+      setMessages((prev) => {
+        if (prev.some((msg) => msg.idMessage === message.idMessage)) {
+          return prev;
+        }
+        return [...prev, message];
+      });
+
+      if (!message.isMine) {
+        chatService.markAsRead(convId).catch((error) => {
+          console.error('Error marcando mensaje como leído desde socket', error);
+        });
+      }
+    };
+
+    socket.on('chat.new-message', handleNewMessage);
+    return () => {
+      socket.off('chat.new-message', handleNewMessage);
+    };
+  }, [id, conversation?.idConversation]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !conversation?.idConversation && !id) return;
@@ -115,7 +145,12 @@ export const ChatRoomPage = () => {
 
     try {
       const sentMsg = await chatService.sendMessage(convId, newMessage);
-      setMessages((prev) => [...prev, sentMsg]);
+      setMessages((prev) => {
+        if (prev.some((msg) => msg.idMessage === sentMsg.idMessage)) {
+          return prev;
+        }
+        return [...prev, sentMsg];
+      });
       setNewMessage('');
     } catch (error) {
       console.error('Error enviando mensaje', error);

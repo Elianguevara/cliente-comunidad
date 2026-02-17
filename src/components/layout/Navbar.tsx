@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
 import { chatService } from '../../services/chat.service';
+import { getChatSocket } from '../../services/socket.service';
 import { userService } from '../../services/user.service';
 import { NotificationBell } from './NotificationBell';
 
@@ -37,28 +38,45 @@ export const Navbar = () => {
     fetchProfileData();
   }, []);
 
+  const loadUnreadMessages = useCallback(async () => {
+    try {
+      const conversations = await chatService.getMyConversations();
+      const unreadTotal = conversations.reduce(
+        (total, conversation) => total + (conversation.unreadCount || 0),
+        0
+      );
+      setUnreadMessagesCount(unreadTotal);
+    } catch (error) {
+      console.error('Error cargando mensajes no leidos en el Navbar', error);
+    }
+  }, []);
+
   // Cargamos el total de mensajes no leidos para mostrarlo en el icono de mensajes
   useEffect(() => {
-    const loadUnreadMessages = async () => {
-      try {
-        const conversations = await chatService.getMyConversations();
-        const unreadTotal = conversations.reduce(
-          (total, conversation) => total + (conversation.unreadCount || 0),
-          0
-        );
-        setUnreadMessagesCount(unreadTotal);
-      } catch (error) {
-        console.error('Error cargando mensajes no leidos en el Navbar', error);
-      }
-    };
-
-    void loadUnreadMessages();
+    const timeout = setTimeout(() => {
+      void loadUnreadMessages();
+    }, 0);
     const interval = setInterval(() => {
       void loadUnreadMessages();
     }, 30000);
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, [loadUnreadMessages]);
+
+  useEffect(() => {
+    const socket = getChatSocket();
+    const handleNewMessage = () => {
+      void loadUnreadMessages();
+    };
+
+    socket.on('chat.new-message', handleNewMessage);
+    return () => {
+      socket.off('chat.new-message', handleNewMessage);
+    };
+  }, [loadUnreadMessages]);
 
   // Lógica de la imagen: Si profileImage existe, usa esa url. Si no, usa las iniciales.
   const avatarUrl = profileImage 

@@ -1,4 +1,5 @@
 import client from '../api/axiosClient';
+import { disconnectRealtimeSockets } from './socket.service';
 import type { LoginRequest, RegisterRequest, AuthResponse } from '../types/auth.types';
 
 export const authService = {
@@ -29,6 +30,7 @@ export const authService = {
 
   // 3. Logout
   logout: () => {
+    disconnectRealtimeSockets();
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('userName');

@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notificationService } from '../../services/notification.service';
+import { getNotificationsSocket } from '../../services/socket.service';
 import type { NotificationResponse } from '../../types/notification.types';
+import type { NotificationsUnreadCountEvent } from '../../types/socket.types';
 
 export const NotificationBell = () => {
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
@@ -11,7 +13,7 @@ export const NotificationBell = () => {
   const navigate = useNavigate();
 
   // Función para cargar notificaciones y el contador de no leídas
-  async function loadNotifications() {
+  const loadNotifications = useCallback(async () => {
     try {
       const [data, count] = await Promise.all([
         notificationService.getMyNotifications(0, 5),
@@ -22,17 +24,51 @@ export const NotificationBell = () => {
     } catch (error) {
       console.error('Error cargando notificaciones', error);
     }
-  }
+  }, []);
 
   // Polling: Carga inicial y actualización cada 30 segundos
   useEffect(() => {
-    void loadNotifications();
+    const timeout = setTimeout(() => {
+      void loadNotifications();
+    }, 0);
 
     const interval = setInterval(() => {
       void loadNotifications();
     }, 30000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    const socket = getNotificationsSocket();
+
+    const handleNewNotification = (notification: NotificationResponse) => {
+      setNotifications((prev) => {
+        if (prev.some((item) => item.idNotification === notification.idNotification)) {
+          return prev;
+        }
+        return [notification, ...prev].slice(0, 5);
+      });
+
+      if (!notification.isRead) {
+        setUnreadCount((prev) => prev + 1);
+      }
+    };
+
+    const handleUnreadCount = (payload: NotificationsUnreadCountEvent) => {
+      setUnreadCount(payload.unreadCount);
+    };
+
+    socket.on('notifications.new', handleNewNotification);
+    socket.on('notifications.unread-count', handleUnreadCount);
+
+    return () => {
+      socket.off('notifications.new', handleNewNotification);
+      socket.off('notifications.unread-count', handleUnreadCount);
+    };
   }, []);
 
   // Manejo de clics fuera y tecla Escape para cerrar el menú
