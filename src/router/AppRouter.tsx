@@ -10,6 +10,7 @@ import { ClientHomePage } from '../pages/client/ClientHomePage';
 import { PetitionDetailPage } from '../pages/feed/PetitionDetailPage';
 import { MyPostulationsPage, ProviderPublicProfilePage } from '../pages/provider';
 import { MyPetitionsPage } from '../pages/client/MyPetitionsPage';
+import { CustomerPublicProfilePage } from '../pages/client/CustomerPublicProfilePage';
 
 // Importaciones de Chat
 import { ChatRoomPage } from '../pages/chat/ChatRoomPage';
@@ -39,14 +40,9 @@ const RequireProvider = () => {
   return <Outlet />;
 };
 
-// --- REDIRECCIÓN INTELIGENTE ---
+// --- REDIRECCIÓN DE INICIO ---
 const RootRedirect = () => {
-  const token = localStorage.getItem('token');
-  const role = localStorage.getItem('role');
-
-  if (!token) return <Navigate to="/login" replace />;
-  if (role === 'PROVIDER') return <Navigate to="/feed" replace />;
-  return <Navigate to="/client-home" replace />;
+  return <Navigate to="/login" replace />;
 };
 
 export const AppRouter = () => {
@@ -64,6 +60,7 @@ export const AppRouter = () => {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/petition/:id" element={<PetitionDetailPage />} />
           <Route path="/provider/:id" element={<ProviderPublicProfilePage />} />
+          <Route path="/customer/:id" element={<CustomerPublicProfilePage />} />
           
           {/* ---> NUEVA RUTA DE NOTIFICACIONES <--- */}
           <Route path="/notifications" element={<NotificationsPage />} />
@@ -88,7 +85,7 @@ export const AppRouter = () => {
           
         </Route>
 
-        {/* --- Ruta Raíz Inteligente --- */}
+        {/* --- Ruta Raíz --- */}
         <Route path="/" element={<RootRedirect />} />
 
         {/* Ruta 404 */}

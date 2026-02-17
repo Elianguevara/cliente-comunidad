@@ -242,6 +242,13 @@ export const MyPostulationsPage = () => {
                   
                   {p.isWinner && ratingStatus && (ratingStatus.canRate || ratingStatus.hasRated) && (
                     <div className="mt-4">
+                      <button
+                        onClick={() => navigate(`/customer/${ratingStatus.customerId}`)}
+                        className="mb-4 w-full rounded-xl border border-brand-300 bg-white py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-700/50 dark:bg-slate-800 dark:text-brand-300 dark:hover:bg-slate-700 md:w-auto md:px-5"
+                      >
+                        Ver perfil del cliente
+                      </button>
+
                       {ratingStatus.canRate && !showRatingForm && (
                         <button
                           onClick={() =>

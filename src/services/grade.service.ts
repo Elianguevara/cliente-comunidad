@@ -30,6 +30,16 @@ export const getProviderReviews = async (
   return response.data;
 };
 
+// Obtener las reseñas paginadas de un cliente
+export const getCustomerReviews = async (
+  customerId: number,
+  page: number = 0,
+  size: number = 5
+): Promise<PageResponse<ReviewResponse>> => {
+  const response = await client.get(`/grades/customer/${customerId}?page=${page}&size=${size}&sort=idGradeCustomer,desc`);
+  return response.data;
+};
+
 // Verifica si el cliente ya calificó a este proveedor por un trabajo específico
 export const checkIfProviderRated = async (providerId: number, petitionId: number): Promise<boolean> => {
   const response = await client.get(`/grades/check-rated/${providerId}`, {

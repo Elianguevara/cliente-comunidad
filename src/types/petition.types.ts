@@ -7,7 +7,9 @@ export interface PetitionResponse {
   stateName: string;        
   dateSince: string;        
   dateUntil: string;
+  customerId?: number;
   customerName: string;
+  customerImage?: string | null;
   cityName: string;
   // --- NUEVO CAMPO ---
   imageUrl?: string | null; // Puede venir nula si el cliente no subió foto

@@ -204,7 +204,16 @@ export const FeedPage = () => {
                       <div className="mt-auto border-t border-slate-100 pt-4 dark:border-slate-800">
                         <div className="mb-4 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
                           <span className="truncate font-medium">📍 {petition.cityName}</span>
-                          <span className="truncate max-w-[40%] text-right">👤 {petition.customerName}</span>
+                          {petition.customerId ? (
+                            <Link
+                              to={`/customer/${petition.customerId}`}
+                              className="truncate max-w-[40%] text-right font-semibold text-brand-700 hover:underline dark:text-brand-300"
+                            >
+                              👤 {petition.customerName}
+                            </Link>
+                          ) : (
+                            <span className="truncate max-w-[40%] text-right">👤 {petition.customerName}</span>
+                          )}
                         </div>
 
                         <Link

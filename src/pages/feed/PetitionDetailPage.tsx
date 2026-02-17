@@ -86,7 +86,11 @@ const resolvePostulationBudget = (postulation: PostulationResponse): number | nu
 const resolvePostulationDescription = (postulation: PostulationResponse): string => {
   const rawDescription = postulation.description ?? '';
   return rawDescription
-    .replace(/\s*(?:[-|,]?\s*)?(?:presupuesto|monto|total)\s*[:\-]?\s*\$?\s*[\d.,]+\s*$/i, '')
+    // Casos como: "Presupuesto: $123 | Detalle: ..."
+    .replace(/^\s*(?:presupuesto|monto|total)\s*:?\s*\$?\s*[\d.,]+\s*(?:[|,-]\s*)?/i, '')
+    .replace(/^\s*detalle\s*:?\s*/i, '')
+    // Casos como: "... | Presupuesto: $123"
+    .replace(/\s*(?:[|,-]\s*)?(?:presupuesto|monto|total)\s*:?\s*\$?\s*[\d.,]+\s*$/i, '')
     .trim();
 };
 
@@ -454,6 +458,15 @@ export const PetitionDetailPage = () => {
               <div className="mt-6 flex flex-wrap gap-4 text-sm">
                 <span className="rounded-lg bg-slate-100 px-3 py-2 font-medium">📍 {petition.cityName}</span>
                 <span className={`rounded-lg px-3 py-2 font-medium ${isExpired ? 'bg-red-100 text-red-700' : 'bg-slate-100'}`}>📅 Vence: {format(new Date(petition.dateUntil), 'dd/MM/yyyy')}</span>
+                {petition.customerId && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/customer/${petition.customerId}`)}
+                    className="rounded-lg bg-brand-50 px-3 py-2 font-semibold text-brand-700 hover:bg-brand-100 dark:bg-brand-900/30 dark:text-brand-300"
+                  >
+                    👤 {petition.customerName}
+                  </button>
+                )}
               </div>
             </article>
 
@@ -660,6 +673,13 @@ export const PetitionDetailPage = () => {
             {/* --- NUEVO: SECCIÓN DE CALIFICACIÓN PARA EL PROVEEDOR --- */}
             {role === 'PROVIDER' && customerRatingStatus && (customerRatingStatus.canRate || customerRatingStatus.hasRated) && (
               <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/customer/${customerRatingStatus.customerId}`)}
+                  className="mb-4 w-full rounded-xl border border-brand-300 bg-white py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-700/50 dark:bg-slate-800 dark:text-brand-300 dark:hover:bg-slate-700"
+                >
+                  Ver perfil del cliente
+                </button>
                 {customerRatingStatus.canRate && !showRatingForm && (
                   <button 
                     onClick={() => setShowRatingForm(true)} 
