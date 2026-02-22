@@ -3,8 +3,7 @@ import { Navbar } from '../../components/layout/Navbar';
 import { Link } from 'react-router-dom';
 import { petitionService } from '../../services/petition.service';
 import type { PetitionResponse } from '../../types/petition.types';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { formatRelativePetitionDate } from '../../utils/dateTime';
 
 export const ClientHomePage = () => {
   const [myPetitions, setMyPetitions] = useState<PetitionResponse[]>([]);
@@ -114,7 +113,7 @@ export const ClientHomePage = () => {
                         {petition.typePetitionName}
                       </span>
                       <span className="text-xs text-slate-500">
-                        {formatDistanceToNow(new Date(petition.dateSince), { addSuffix: true, locale: es })}
+                        {formatRelativePetitionDate(petition.dateSince)}
                       </span>
                     </div>
 

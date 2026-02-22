@@ -6,8 +6,8 @@ import { postulationService } from '../../services/postulation.service';
 import { chatService } from '../../services/chat.service';
 import type { PetitionResponse } from '../../types/petition.types';
 import type { PostulationResponse } from '../../types/postulation.types';
-import { format, formatDistanceToNow, isAfter, startOfDay } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { format, isAfter, startOfDay } from 'date-fns';
+import { formatRelativePetitionDate } from '../../utils/dateTime';
 
 // Importamos el componente de calificaciones y la nueva validación
 import { RateProviderForm } from '../../components/reviews/RateProviderForm';
@@ -436,7 +436,7 @@ export const PetitionDetailPage = () => {
                 <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${isCancelada ? 'bg-red-100 text-red-700' : 'bg-brand-100 text-brand-700'}`}>
                   {isCancelada ? 'CANCELADA' : petition.typePetitionName}
                 </span>
-                <span className="text-xs text-slate-500">{formatDistanceToNow(new Date(petition.dateSince), { addSuffix: true, locale: es })}</span>
+                <span className="text-xs text-slate-500">{formatRelativePetitionDate(petition.dateSince)}</span>
               </div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{petition.professionName}</h1>
               <p className="mt-4 text-slate-700 dark:text-slate-300 leading-relaxed">{petition.description}</p>

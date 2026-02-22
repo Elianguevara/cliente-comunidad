@@ -39,7 +39,7 @@ export const RateCustomerForm = ({ customerId, petitionId, onSuccess }: RateCust
             <button
               key={star}
               type="button"
-              className={`text-3xl transition-colors drop-shadow-sm ${star <= (hover || rating) ? 'text-yellow-400' : 'text-slate-200 dark:text-slate-600 hover:text-yellow-200'}`}
+              className={`text-3xl transition-colors drop-shadow-sm ${star <= (hover || rating) ? 'text-yellow-400' : 'text-slate-400 dark:text-slate-500 hover:text-yellow-300'}`}
               onClick={() => setRating(star)}
               onMouseEnter={() => setHover(star)}
               onMouseLeave={() => setHover(0)}

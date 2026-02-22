@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navbar } from '../../components/layout/Navbar';
 import { petitionService } from '../../services/petition.service';
 import type { PetitionResponse } from '../../types/petition.types';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
+import { formatRelativePetitionDate } from '../../utils/dateTime';
 
 export const FeedPage = () => {
   const [petitions, setPetitions] = useState<PetitionResponse[]>([]);
@@ -195,7 +194,7 @@ export const FeedPage = () => {
                         <div className="flex items-center justify-between mb-2">
                           <h2 className="text-xl font-bold text-slate-900 dark:text-white line-clamp-1">{petition.professionName}</h2>
                           <span className="text-[10px] text-slate-400 shrink-0">
-                            {formatDistanceToNow(new Date(petition.dateSince), { addSuffix: true, locale: es })}
+                            {formatRelativePetitionDate(petition.dateSince)}
                           </span>
                         </div>
                         <p className="mb-4 text-sm text-slate-600 dark:text-slate-400 line-clamp-3">{petition.description}</p>

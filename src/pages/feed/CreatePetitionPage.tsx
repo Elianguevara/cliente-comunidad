@@ -259,10 +259,10 @@ export const CreatePetitionPage = () => {
               </div>
             </section>
 
-            {/* 3. Urgencia (Radio Cards) */}
+            {/* 3. Categoria (Radio Cards) */}
             <section>
               <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Nivel de urgencia
+                Categoria del servicio
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {types.map((type) => (
@@ -270,7 +270,7 @@ export const CreatePetitionPage = () => {
                     <input
                       type="radio"
                       value={type.idTypePetition}
-                      {...register('idTypePetition', { required: 'Selecciona el tipo de urgencia' })}
+                      {...register('idTypePetition', { required: 'Selecciona una categoria' })}
                       className="peer sr-only"
                     />
                     <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-4 text-center text-sm font-medium text-slate-600 transition-all 
