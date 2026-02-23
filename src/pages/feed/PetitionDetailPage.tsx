@@ -199,7 +199,8 @@ export const PetitionDetailPage = () => {
 
   const canApply = role === 'PROVIDER' && isPublicada && !alreadyApplied && !isExpired;
   const canComplete = role === 'CUSTOMER' && isAdjudicada;
-  const canReactivate = role === 'CUSTOMER' && isCancelada && !isExpired;
+  const canReactivate = role === 'CUSTOMER' && isCancelada;
+  const canCancel = role === 'CUSTOMER' && isPublicada && postulations.length === 0;
   const canShowProviderActions = role === 'PROVIDER';
 
   const providerStatusMessage = useMemo(() => {
@@ -311,7 +312,7 @@ export const PetitionDetailPage = () => {
   };
 
   const handleReactivate = async () => {
-    if (!petition || isExpired) return;
+    if (!petition) return;
     try {
       setIsReactivating(true);
       await petitionService.reactivate(petition.idPetition);
@@ -751,22 +752,22 @@ export const PetitionDetailPage = () => {
                   </button>
                 )}
 
-                {isCancelada && isExpired && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-[10px] text-amber-800">
-                    Expirada: actualiza la fecha para reactivar.
-                  </div>
-                )}
-
                 {canComplete && (
                   <button onClick={handleCompleteWork} disabled={isCompleting} className="w-full rounded-xl bg-brand-600 py-3 font-bold text-white shadow-lg active:scale-95 transition hover:bg-brand-700">
                     {isCompleting ? 'Finalizando...' : 'Finalizar Trabajo'}
                   </button>
                 )}
 
-                {!isAdjudicada && !isFinalizada && !isCancelada && (
+                {canCancel && (
                   <button onClick={handleDelete} disabled={isDeleting} className="w-full rounded-xl border-2 border-red-200 bg-white py-3 font-bold text-red-600 hover:bg-red-50 active:scale-95 transition">
                     {isDeleting ? '...' : 'Cancelar Solicitud'}
                   </button>
+                )}
+
+                {role === 'CUSTOMER' && isPublicada && postulations.length > 0 && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-800">
+                    No se puede cancelar una solicitud que ya tiene postulaciones.
+                  </div>
                 )}
 
                 {/* === SECCIÓN DE CALIFICACIÓN === */}

@@ -1,5 +1,6 @@
 import client from '../api/axiosClient';
 import type { PostulationRequest, PostulationResponse } from '../types/postulation.types';
+import type { Page } from '../types/common.types';
 
 export const postulationService = {
   /**
@@ -43,8 +44,8 @@ export const postulationService = {
   /**
    * Obtiene el historial de ofertas del proveedor autenticado.
    */
-  getMyPostulations: async (page = 0, size = 10) => {
-    const response = await client.get(`/postulations/my`, {
+  getMyPostulations: async (page = 0, size = 10): Promise<Page<PostulationResponse>> => {
+    const response = await client.get<Page<PostulationResponse>>(`/postulations/my`, {
       params: {
         page,
         size,

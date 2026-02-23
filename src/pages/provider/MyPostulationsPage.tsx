@@ -28,7 +28,7 @@ export const MyPostulationsPage = () => {
       setLoading(true);
       setError('');
       const data = await postulationService.getMyPostulations();
-      const currentPostulations = data.content || [];
+      const currentPostulations: PostulationResponse[] = data.content || [];
       setPostulations(currentPostulations); // .content por la paginación de Spring
 
       const winnerPetitionIds = [...new Set(currentPostulations.filter((p) => p.isWinner).map((p) => p.petitionId))];

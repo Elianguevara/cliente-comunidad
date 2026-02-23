@@ -23,7 +23,7 @@ export const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [refreshReviews, setRefreshReviews] = useState(0);
+  const [refreshReviews] = useState(0);
 
   useEffect(() => {
     loadUserProfile();
